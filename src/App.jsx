@@ -19,7 +19,14 @@ function App() {
   const [cardFile, setCardFile] = useState(null)
 
   // 서비스 리포트 폼 상태
-  const [workDate, setWorkDate] = useState(new Date().toISOString().substring(0, 10))
+  //const [workDate, setWorkDate] = useState(new Date().toISOString().substring(0, 10))
+  const [workDate, setWorkDate] = useState(() => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+});
   const [startHour, setStartHour] = useState('00')
   const [startMin, setStartMin] = useState('00')
   const [endHour, setEndHour] = useState('00')
