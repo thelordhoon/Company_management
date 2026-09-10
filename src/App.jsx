@@ -259,13 +259,13 @@ function App() {
             </div>
             
             <h1 style={{ margin: '0 0 6px 0', fontSize: '24px', fontWeight: '800' }}>업체관리</h1>
-            <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>안녕하세요, 오늘도 좋은 하루 되세요.</p>
+            <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>안녕하세요. 오늘도 좋은 하루 되세요.</p>
 
             <div style={{ position: 'relative', marginTop: '20px' }}>
               <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>🔍</span>
               <input 
                 type="text"
-                placeholder="업체명, 사업자번호, 대표자명 검색..." 
+                placeholder="업체명, 담당자명 검색..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '40px', backgroundColor: '#FFFFFF', border: 'none', borderRadius: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '46px' }}
