@@ -183,7 +183,6 @@ function App() {
     }
   }
 
-  // 서명 업로드 과정 없이 DB 내용만 저장하도록 깔끔하게 정돈된 함수
   const handleSaveReport = async (e) => {
     e.preventDefault()
     if (!selectedCompany) return
@@ -254,7 +253,6 @@ function App() {
       {/* 1. 메인 목록 화면 */}
       {viewMode === 'list' && (
         <div>
-          {/* 상단 블루 그라데이션 헤더 */}
           <div style={{ background: 'linear-gradient(135deg, #1E60E8 0%, #0093E9 100%)', padding: '24px 20px 32px', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px', color: 'white' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <span style={{ fontSize: '20px', cursor: 'pointer' }}>☰</span>
@@ -263,7 +261,6 @@ function App() {
             <h1 style={{ margin: '0 0 6px 0', fontSize: '24px', fontWeight: '800' }}>업체관리</h1>
             <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>안녕하세요, 오늘도 좋은 하루 되세요.</p>
 
-            {/* 검색창 */}
             <div style={{ position: 'relative', marginTop: '20px' }}>
               <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>🔍</span>
               <input 
@@ -278,7 +275,6 @@ function App() {
           </div>
 
           <div style={{ padding: '0 16px', marginTop: '-12px' }}>
-            {/* 상단 2개 대시보드 카드 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
               <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>🏢</div>
@@ -298,7 +294,6 @@ function App() {
               </div>
             </div>
 
-            {/* 신규 업체 등록 입력 폼 (토글) */}
             {showAddForm && (
               <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '20px' }}>
                 <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#1E293B' }}>➕ 신규 업체 등록</h4>
@@ -316,10 +311,8 @@ function App() {
               </div>
             )}
 
-            {/* 업체 목록 제목 */}
             <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1E293B', margin: '0 0 12px 4px' }}>업체 목록</h3>
 
-            {/* 업체 목록 카드 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {filteredCompanies.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '30px', color: '#94A3B8', backgroundColor: 'white', borderRadius: '16px' }}>
@@ -446,22 +439,41 @@ function App() {
               {historyList.length === 0 ? (
                 <p style={{ fontSize: '13px', color: '#94A3B8', textAlign: 'center', margin: '10px 0' }}>등록된 서비스 이력이 없습니다.</p>
               ) : (
-                historyList.map((h) => (
-                  <div key={h.id} style={{ border: '1px solid #F1F5F9', padding: '12px', borderRadius: '8px', backgroundColor: '#F8FAFC', position: 'relative' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '12px', color: '#2563EB', fontWeight: '600' }}>
-                        {h.work_date} ({h.start_time} ~ {h.end_time})
-                      </span>
-                      <button 
-                        onClick={() => handleDeleteHistoryItem(h.id)}
-                        style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 4px', color: '#EF4444' }}
-                      >
-                        🗑️
-                      </button>
+                historyList.map((h) => {
+                  let parsedParts = []
+                  try {
+                    if (h.parts) {
+                      const temp = typeof h.parts === 'string' ? JSON.parse(h.parts) : h.parts
+                      parsedParts = Array.isArray(temp) ? temp.filter(p => p && p.trim() !== '') : []
+                    }
+                  } catch (e) {
+                    parsedParts = []
+                  }
+
+                  return (
+                    <div key={h.id} style={{ border: '1px solid #F1F5F9', padding: '12px', borderRadius: '8px', backgroundColor: '#F8FAFC', position: 'relative' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '12px', color: '#2563EB', fontWeight: '600' }}>
+                          {h.work_date} ({h.start_time} ~ {h.end_time})
+                        </span>
+                        <button 
+                          onClick={() => handleDeleteHistoryItem(h.id)}
+                          style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 4px', color: '#EF4444' }}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                      
+                      <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#334155' }}>
+                        <b>작업:</b> {h.work_content || '-'}
+                      </p>
+
+                      <p style={{ margin: 0, fontSize: '13px', color: '#334155' }}>
+                        <b>교체 파트:</b> {parsedParts.length > 0 ? parsedParts.join(', ') : '없음'}
+                      </p>
                     </div>
-                    <p style={{ margin: '0', fontSize: '13px', color: '#334155' }}><b>작업:</b> {h.work_content}</p>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </div>
@@ -501,7 +513,6 @@ function App() {
                 </div>
               </div>
 
-              {/* 6:4 비율 영역 */}
               <div style={{ display: 'grid', gridTemplateColumns: '6fr 4fr', gap: '8px' }}>
                 <div>
                   <label style={labelStyle}>🏢 업체명</label>
