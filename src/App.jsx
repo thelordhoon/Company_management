@@ -11,7 +11,6 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState('list') // 'list', 'detail', 'report'
   const [selectedCompany, setSelectedCompany] = useState(null)
-  const [activeTab, setActiveTab] = useState('home') // 'home', 'companies', 'add', 'more'
 
   // 업체 정보 수정 상태
   const [isEditing, setIsEditing] = useState(false)
@@ -209,6 +208,7 @@ function App() {
       } else {
         alert('서비스 리포트가 성공적으로 저장되었습니다!')
         setWorkContent('')
+        setSn('')
         setParts(['', ''])
         clearSignature()
         handleSelectCompany(selectedCompany)
@@ -248,7 +248,7 @@ function App() {
   }
 
   return (
-    <div style={{ backgroundColor: '#F4F7FB', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', maxWidth: '480px', margin: '0 auto', position: 'relative', paddingBottom: '70px', boxSizing: 'border-box' }}>
+    <div style={{ backgroundColor: '#F4F7FB', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', maxWidth: '480px', margin: '0 auto', position: 'relative', paddingBottom: '24px', boxSizing: 'border-box' }}>
       
       {/* 1. 메인 목록 화면 */}
       {viewMode === 'list' && (
@@ -259,13 +259,13 @@ function App() {
             </div>
             
             <h1 style={{ margin: '0 0 6px 0', fontSize: '24px', fontWeight: '800' }}>업체관리</h1>
-            <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>안녕하세요. 오늘도 좋은 하루 되세요.</p>
+            <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>안녕하세요, 오늘도 좋은 하루 되세요.</p>
 
             <div style={{ position: 'relative', marginTop: '20px' }}>
               <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>🔍</span>
               <input 
                 type="text"
-                placeholder="업체명, 담당자명 검색..." 
+                placeholder="업체명, 사업자번호, 대표자명 검색..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '40px', backgroundColor: '#FFFFFF', border: 'none', borderRadius: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '46px' }}
@@ -465,6 +465,10 @@ function App() {
                       </div>
                       
                       <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#334155' }}>
+                        <b>S/N:</b> {h.sn || '없음'}
+                      </p>
+
+                      <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#334155' }}>
                         <b>작업:</b> {h.work_content || '-'}
                       </p>
 
@@ -591,26 +595,6 @@ function App() {
           </div>
         </div>
       )}
-
-      {/* 하단 네비게이션 탭 바 */}
-      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', height: '60px', backgroundColor: '#FFFFFF', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-around', alignItems: 'center', zIndex: 100 }}>
-        <div onClick={() => { setViewMode('list'); setActiveTab('home'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: activeTab === 'home' ? '#2563EB' : '#94A3B8' }}>
-          <span style={{ fontSize: '18px' }}>🏠</span>
-          <span style={{ fontSize: '11px', fontWeight: '600', marginTop: '2px' }}>홈</span>
-        </div>
-        <div onClick={() => { setViewMode('list'); setActiveTab('companies'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: activeTab === 'companies' ? '#2563EB' : '#94A3B8' }}>
-          <span style={{ fontSize: '18px' }}>🏢</span>
-          <span style={{ fontSize: '11px', fontWeight: '600', marginTop: '2px' }}>업체목록</span>
-        </div>
-        <div onClick={() => { setViewMode('list'); setShowAddForm(true); setActiveTab('add'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: activeTab === 'add' ? '#2563EB' : '#94A3B8' }}>
-          <span style={{ fontSize: '18px' }}>➕</span>
-          <span style={{ fontSize: '11px', fontWeight: '600', marginTop: '2px' }}>등록</span>
-        </div>
-        <div onClick={() => setActiveTab('more')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: activeTab === 'more' ? '#2563EB' : '#94A3B8' }}>
-          <span style={{ fontSize: '18px' }}>•••</span>
-          <span style={{ fontSize: '11px', fontWeight: '600', marginTop: '2px' }}>더보기</span>
-        </div>
-      </div>
 
     </div>
   )
