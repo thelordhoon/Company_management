@@ -553,7 +553,7 @@ function App() {
               </div>
 
               <div>
-                <label style={labelStyle}>🔧 사용 부품 (최대 2개)</label>
+                <label style={labelStyle}>🔧 사용 부품</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
                   {parts.map((p, idx) => (
                     <input 
