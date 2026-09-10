@@ -12,6 +12,10 @@ function App() {
   const [viewMode, setViewMode] = useState('list') // 'list', 'detail', 'report'
   const [selectedCompany, setSelectedCompany] = useState(null)
 
+  // 업체 정보 수정 상태
+  const [isEditing, setIsEditing] = useState(false)
+  const [editData, setEditData] = useState({ name: '', manager: '', phone: '', email: '', address: '' })
+
   // 신규 업체 입력 상태
   const [showAddForm, setShowAddForm] = useState(false)
   const [name, setName] = useState('')
@@ -115,8 +119,56 @@ function App() {
   const handleSelectCompany = async (company) => {
     setSelectedCompany(company)
     setConfirmor(company.manager || '')
+    setIsEditing(false)
+    setEditData({
+      name: company.name || '',
+      manager: company.manager || '',
+      phone: company.phone || '',
+      email: company.email || '',
+      address: company.address || ''
+    })
     setViewMode('detail')
     fetchServiceHistory(company.id)
+  }
+
+  const handleStartEdit = () => {
+    setIsEditing(true)
+    setEditData({
+      name: selectedCompany.name || '',
+      manager: selectedCompany.manager || '',
+      phone: selectedCompany.phone || '',
+      email: selectedCompany.email || '',
+      address: selectedCompany.address || ''
+    })
+  }
+
+  const handleSaveCompanyEdit = async () => {
+    if (!editData.name.trim()) return alert('업체명을 입력해주세요.')
+
+    setUploading(true)
+    const { data, error } = await supabase
+      .from('companies')
+      .update({
+        name: editData.name,
+        manager: editData.manager,
+        phone: editData.phone,
+        email: editData.email,
+        address: editData.address
+      })
+      .eq('id', selectedCompany.id)
+      .select()
+
+    setUploading(false)
+
+    if (error) {
+      alert('수정 실패: ' + error.message)
+    } else {
+      alert('업체 정보가 수정되었습니다.')
+      const updated = data && data.length > 0 ? data[0] : { ...selectedCompany, ...editData }
+      setSelectedCompany(updated)
+      setIsEditing(false)
+      fetchCompanies()
+    }
   }
 
   const handleDeleteCompany = async (id) => {
@@ -135,7 +187,6 @@ function App() {
     }
   }
 
-  // 개별 서비스 이력 삭제 함수
   const handleDeleteHistoryItem = async (historyId) => {
     if (!window.confirm('선택한 서비스 이력을 삭제하시겠습니까?')) return
 
@@ -309,50 +360,86 @@ function App() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0 16px' }}>
             <button onClick={() => setViewMode('list')} style={{ border: 'none', background: 'none', fontSize: '18px', cursor: 'pointer', color: '#1E293B' }}>← 뒤로</button>
-            <h3 style={{ margin: 0, fontSize: '17px', color: '#0F172A' }}>업체 상세</h3>
+            <h3 style={{ margin: 0, fontSize: '17px', color: '#0F172A' }}>{isEditing ? '업체 정보 수정' : '업체 상세'}</h3>
             <span style={{ fontSize: '18px', color: '#94A3B8' }}>⋮</span>
           </div>
 
           <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>🏢</div>
-                <h3 style={{ margin: 0, fontSize: '18px', color: '#1E293B' }}>{selectedCompany.name}</h3>
-              </div>
-              <button 
-                onClick={() => setViewMode('report')}
-                style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#2563EB', border: 'none', color: 'white', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              >
-                📄
-              </button>
-            </div>
+            {!isEditing ? (
+              /* 일반 조회 모드 */
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>🏢</div>
+                    <h3 style={{ margin: 0, fontSize: '18px', color: '#1E293B' }}>{selectedCompany.name}</h3>
+                  </div>
+                  <button 
+                    onClick={() => setViewMode('report')}
+                    style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#2563EB', border: 'none', color: 'white', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                  >
+                    📄
+                  </button>
+                </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748B' }}>👤 담당자명</span>
-                <span style={{ fontWeight: '500', color: '#1E293B' }}>{selectedCompany.manager || '-'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748B' }}>📞 연락처</span>
-                <span style={{ fontWeight: '500', color: '#1E293B' }}>{selectedCompany.phone || '-'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748B' }}>✉️ 이메일</span>
-                <span style={{ fontWeight: '500', color: '#1E293B' }}>{selectedCompany.email || '-'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748B' }}>📍 주소</span>
-                <span style={{ fontWeight: '500', color: '#1E293B', textAlign: 'right', maxWidth: '60%' }}>{selectedCompany.address || '-'}</span>
-              </div>
-            </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748B' }}>👤 담당자명</span>
+                    <span style={{ fontWeight: '500', color: '#1E293B' }}>{selectedCompany.manager || '-'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748B' }}>📞 연락처</span>
+                    <span style={{ fontWeight: '500', color: '#1E293B' }}>{selectedCompany.phone || '-'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748B' }}>✉️ 이메일</span>
+                    <span style={{ fontWeight: '500', color: '#1E293B' }}>{selectedCompany.email || '-'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748B' }}>📍 주소</span>
+                    <span style={{ fontWeight: '500', color: '#1E293B', textAlign: 'right', maxWidth: '60%' }}>{selectedCompany.address || '-'}</span>
+                  </div>
+                </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '20px' }}>
-              <button style={{ padding: '10px', borderRadius: '8px', border: '1px solid #2563EB', background: 'white', color: '#2563EB', fontWeight: '600' }}>수정</button>
-              <button onClick={() => handleDeleteCompany(selectedCompany.id)} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #EF4444', background: 'white', color: '#EF4444', fontWeight: '600', cursor: 'pointer' }}>삭제</button>
-            </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '20px' }}>
+                  <button onClick={handleStartEdit} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #2563EB', background: 'white', color: '#2563EB', fontWeight: '600', cursor: 'pointer' }}>수정</button>
+                  <button onClick={() => handleDeleteCompany(selectedCompany.id)} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #EF4444', background: 'white', color: '#EF4444', fontWeight: '600', cursor: 'pointer' }}>삭제</button>
+                </div>
+              </>
+            ) : (
+              /* 정보 수정 모드 */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={labelStyle}>🏢 업체명*</label>
+                  <input value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>👤 담당자명</label>
+                  <input value={editData.manager} onChange={(e) => setEditData({ ...editData, manager: e.target.value })} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>📞 연락처</label>
+                  <input value={editData.phone} onChange={(e) => setEditData({ ...editData, phone: e.target.value })} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>✉️ 이메일</label>
+                  <input value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>📍 주소</label>
+                  <input value={editData.address} onChange={(e) => setEditData({ ...editData, address: e.target.value })} style={inputStyle} />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                  <button onClick={() => setIsEditing(false)} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #94A3B8', background: 'white', color: '#64748B', fontWeight: '600', cursor: 'pointer' }}>취소</button>
+                  <button onClick={handleSaveCompanyEdit} disabled={uploading} style={{ padding: '10px', borderRadius: '8px', border: 'none', background: '#2563EB', color: 'white', fontWeight: '600', cursor: 'pointer' }}>
+                    {uploading ? '저장 중...' : '저장'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* 누적 서비스 이력 및 개별 삭제 버튼 */}
+          {/* 누적 서비스 이력 */}
           <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <h4 style={{ margin: '0 0 12px 0', color: '#1E293B' }}>📋 최근 서비스 이력 ({historyList.length})</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -365,7 +452,6 @@ function App() {
                       <span style={{ fontSize: '12px', color: '#2563EB', fontWeight: '600' }}>
                         {h.work_date} ({h.start_time} ~ {h.end_time})
                       </span>
-                      {/* 개별 이력 삭제 버튼 */}
                       <button 
                         onClick={() => handleDeleteHistoryItem(h.id)}
                         style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 4px', color: '#EF4444' }}
