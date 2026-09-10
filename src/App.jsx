@@ -26,6 +26,7 @@ function App() {
     name: '', 
     managers: [{ name: '', phone: '', role: '', email: '' }], 
     address: '',
+    note: '', // DB의 card_url 매핑
     ink: '',
     solvent: ''
   })
@@ -35,6 +36,7 @@ function App() {
   const [name, setName] = useState('')
   const [managers, setManagers] = useState([{ name: '', phone: '', role: '', email: '' }])
   const [address, setAddress] = useState('')
+  const [note, setNote] = useState('') // DB의 card_url 매핑
   const [ink, setInk] = useState('')
   const [solvent, setSolvent] = useState('')
 
@@ -81,7 +83,7 @@ function App() {
     if (!error) setAllHistories(data || [])
   }
 
-  // 담당자 목록 파싱 도우미 (이메일 호환 추가)
+  // 담당자 목록 파싱 도우미
   const parseManagers = (managerData, phoneData, defaultEmail) => {
     if (!managerData) return [{ name: '', phone: '', role: '', email: defaultEmail || '' }]
     
@@ -148,6 +150,7 @@ function App() {
         phone: primaryPhone,
         email: primaryEmail,
         address, 
+        card_url: note, // 비고 데이터를 card_url에 저장
         ink,
         solvent
       }])
@@ -158,7 +161,7 @@ function App() {
       alert('저장 실패: ' + error.message)
     } else {
       alert('업체가 등록되었습니다.')
-      setName(''); setAddress(''); setInk(''); setSolvent('');
+      setName(''); setAddress(''); setNote(''); setInk(''); setSolvent('');
       setManagers([{ name: '', phone: '', role: '', email: '' }])
       setShowAddForm(false)
       fetchCompanies()
@@ -185,6 +188,7 @@ function App() {
       name: company.name || '',
       managers: parsedManagers,
       address: company.address || '',
+      note: company.card_url || '',
       ink: company.ink || '',
       solvent: company.solvent || ''
     })
@@ -211,6 +215,7 @@ function App() {
         phone: primaryPhone,
         email: primaryEmail,
         address: editData.address,
+        card_url: editData.note, // 비고 데이터를 card_url에 저장
         ink: editData.ink,
         solvent: editData.solvent
       })
@@ -223,7 +228,7 @@ function App() {
       alert('수정 실패: ' + error.message)
     } else {
       alert('업체 정보가 수정되었습니다.')
-      const updated = data && data.length > 0 ? data[0] : { ...selectedCompany, ...editData }
+      const updated = data && data.length > 0 ? data[0] : { ...selectedCompany, ...editData, card_url: editData.note }
       const updatedManagers = parseManagers(updated.manager, updated.phone, updated.email)
       setSelectedCompany({ ...updated, managersList: updatedManagers })
       setIsEditing(false)
@@ -465,6 +470,17 @@ function App() {
                     <input placeholder="주소" value={address} onChange={(e) => setAddress(e.target.value)} style={inputStyle} />
                   </div>
 
+                  <div>
+                    <label style={labelStyle}>📌 메모</label>
+                    <textarea 
+                      placeholder="메모 사항을 입력하세요" 
+                      rows="3" 
+                      value={note} 
+                      onChange={(e) => setNote(e.target.value)} 
+                      style={inputStyle} 
+                    />
+                  </div>
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <div>
                       <label style={labelStyle}>🧪 잉크 품번</label>
@@ -649,6 +665,14 @@ function App() {
                     <span style={{ fontWeight: '500', color: '#1E293B', textAlign: 'right', maxWidth: '60%' }}>{selectedCompany.address || '-'}</span>
                   </div>
 
+                  {/* 주소 바로 아래 추가된 비고 영역 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                    <span style={{ color: '#64748B', fontSize: '13px', fontWeight: '600' }}>📌 비고</span>
+                    <div style={{ backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid #F1F5F9', color: '#334155', whiteSpace: 'pre-wrap', minHeight: '38px', fontSize: '13px' }}>
+                      {selectedCompany.card_url || <span style={{ color: '#94A3B8' }}>등록된 메모가 없습니다.</span>}
+                    </div>
+                  </div>
+
                   <div style={{ backgroundColor: '#EFF6FF', padding: '12px', borderRadius: '10px', marginTop: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                       <span style={{ color: '#1E40AF', fontWeight: '600' }}>🧪 잉크:</span>
@@ -698,6 +722,17 @@ function App() {
                 <div>
                   <label style={labelStyle}>📍 주소</label>
                   <input value={editData.address} onChange={(e) => setEditData({ ...editData, address: e.target.value })} style={inputStyle} />
+                </div>
+
+                <div>
+                  <label style={labelStyle}>📌 비고</label>
+                  <textarea 
+                    rows="3" 
+                    placeholder="비고 사항을 입력하세요"
+                    value={editData.note} 
+                    onChange={(e) => setEditData({ ...editData, note: e.target.value })} 
+                    style={inputStyle} 
+                  />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
