@@ -532,8 +532,12 @@ function App() {
                 <div>
                   <label style={labelStyle}>🏷️ 모델명</label>
                   <select value={modelName} onChange={(e) => setModelName(e.target.value)} style={inputStyle}>
+                    <option value="JET1Neo">JET1Neo</option>
                     <option value="JET2Neo">JET2Neo</option>
+                    <option value="JET3">JET3</option>
                     <option value="JET3Up">JET3Up</option>
+                  
+
                     <option value="기타">기타</option>
                   </select>
                 </div>
