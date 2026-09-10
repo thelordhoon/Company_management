@@ -258,7 +258,7 @@ function App() {
               <span style={{ fontSize: '20px', cursor: 'pointer' }}>☰</span>
             </div>
             
-            <h1 style={{ margin: '0 0 6px 0', fontSize: '24px', fontWeight: '800' }}>업체관리</h1>
+            <h1 style={{ margin: '0 0 6px 0', fontSize: '24px', fontWeight: '800' }}> 주식회사 메이쓰 현장 업체관리</h1>
             <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>안녕하세요, 오늘도 좋은 하루 되세요.</p>
 
             <div style={{ position: 'relative', marginTop: '20px' }}>
