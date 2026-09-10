@@ -57,33 +57,6 @@ function App() {
     if (!error) setCompanies(data || [])
   }
 
-  const dataURLtoFile = (dataurl, filename) => {
-    let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-        bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-    while(n--){
-        u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, {type:mime});
-  }
-
-  const uploadFile = async (file) => {
-    if (!file) return null
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
-    
-    const { error: uploadError } = await supabase.storage
-      .from('business-cards')
-      .upload(fileName, file)
-
-    if (uploadError) return null
-
-    const { data } = supabase.storage
-      .from('business-cards')
-      .getPublicUrl(fileName)
-
-    return data.publicUrl
-  }
-
   const handleAddCompany = async (e) => {
     e.preventDefault()
     if (!name) return alert('업체명을 입력해주세요!')
@@ -210,44 +183,41 @@ function App() {
     }
   }
 
+  // 서명 업로드 과정 없이 DB 내용만 저장하도록 깔끔하게 정돈된 함수
   const handleSaveReport = async (e) => {
     e.preventDefault()
     if (!selectedCompany) return
 
     setUploading(true)
-    let signatureUrl = ''
 
-    if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
-      const sigData = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png')
-      const sigFile = dataURLtoFile(sigData, 'signature.png')
-      signatureUrl = await uploadFile(sigFile)
-    }
+    try {
+      const { error } = await supabase
+        .from('service_history')
+        .insert([{ 
+          company_id: selectedCompany.id, 
+          work_date: workDate,
+          start_time: `${startHour}:${startMin}`,
+          end_time: `${endHour}:${endMin}`,
+          sn,
+          model_name: modelName,
+          work_content: workContent,
+          parts: JSON.stringify(parts),
+          confirmor
+        }])
 
-    const { error } = await supabase
-      .from('service_history')
-      .insert([{ 
-        company_id: selectedCompany.id, 
-        work_date: workDate,
-        start_time: `${startHour}:${startMin}`,
-        end_time: `${endHour}:${endMin}`,
-        sn,
-        model_name: modelName,
-        work_content: workContent,
-        parts: JSON.stringify(parts),
-        confirmor,
-        signature_url: signatureUrl
-      }])
-
-    setUploading(false)
-
-    if (error) {
-      alert('리포트 저장 실패: ' + error.message)
-    } else {
-      alert('서비스 리포트가 저장되었습니다!')
-      setWorkContent('')
-      setParts(['', ''])
-      clearSignature()
-      handleSelectCompany(selectedCompany)
+      if (error) {
+        alert('리포트 저장 실패: ' + error.message)
+      } else {
+        alert('서비스 리포트가 성공적으로 저장되었습니다!')
+        setWorkContent('')
+        setParts(['', ''])
+        clearSignature()
+        handleSelectCompany(selectedCompany)
+      }
+    } catch (err) {
+      alert('저장 중 알 수 없는 오류가 발생했습니다: ' + err.message)
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -284,7 +254,7 @@ function App() {
       {/* 1. 메인 목록 화면 */}
       {viewMode === 'list' && (
         <div>
-          {/* 블루 그라데이션 상단 헤더 */}
+          {/* 상단 블루 그라데이션 헤더 */}
           <div style={{ background: 'linear-gradient(135deg, #1E60E8 0%, #0093E9 100%)', padding: '24px 20px 32px', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px', color: 'white' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <span style={{ fontSize: '20px', cursor: 'pointer' }}>☰</span>
@@ -298,7 +268,7 @@ function App() {
               <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>🔍</span>
               <input 
                 type="text"
-                placeholder="업체명, 담당자명 검색..." 
+                placeholder="업체명, 사업자번호, 대표자명 검색..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '40px', backgroundColor: '#FFFFFF', border: 'none', borderRadius: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '46px' }}
@@ -531,6 +501,7 @@ function App() {
                 </div>
               </div>
 
+              {/* 6:4 비율 영역 */}
               <div style={{ display: 'grid', gridTemplateColumns: '6fr 4fr', gap: '8px' }}>
                 <div>
                   <label style={labelStyle}>🏢 업체명</label>
