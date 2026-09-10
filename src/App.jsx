@@ -531,7 +531,7 @@ function App() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '7fr 3fr', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '6fr 4fr', gap: '8px' }}>
                 <div>
                   <label style={labelStyle}>🏢 업체명</label>
                   <input value={selectedCompany.name} readOnly style={{ ...inputStyle, backgroundColor: '#E2E8F0', fontWeight: '600' }} />
