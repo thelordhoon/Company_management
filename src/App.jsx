@@ -265,7 +265,7 @@ function App() {
               <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>🔍</span>
               <input 
                 type="text"
-                placeholder="업체명, 사업자번호, 대표자명 검색..." 
+                placeholder="업체명,담당자명 검색..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '40px', backgroundColor: '#FFFFFF', border: 'none', borderRadius: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '46px' }}
