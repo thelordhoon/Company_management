@@ -11,6 +11,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState('list') // 'list', 'detail', 'report'
   const [selectedCompany, setSelectedCompany] = useState(null)
+  const [activeTab, setActiveTab] = useState('home') // 'home', 'companies', 'add', 'more'
 
   // 업체 정보 수정 상태
   const [isEditing, setIsEditing] = useState(false)
@@ -90,9 +91,7 @@ function App() {
     setUploading(true)
     const { error } = await supabase
       .from('companies')
-      .insert([{ 
-        name, phone, manager, address, email 
-      }])
+      .insert([{ name, phone, manager, address, email }])
 
     setUploading(false)
 
@@ -254,7 +253,10 @@ function App() {
 
   const filteredCompanies = searchTerm.trim() === '' 
     ? companies 
-    : companies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    : companies.filter(c => 
+        (c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (c.manager && c.manager.toLowerCase().includes(searchTerm.toLowerCase()))
+      )
 
   const inputStyle = {
     width: '100%',
@@ -277,96 +279,126 @@ function App() {
   }
 
   return (
-    <div style={{ backgroundColor: '#F1F5F9', minHeight: '100vh', padding: '12px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', maxWidth: '480px', margin: '0 auto' }}>
+    <div style={{ backgroundColor: '#F4F7FB', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', maxWidth: '480px', margin: '0 auto', position: 'relative', paddingBottom: '70px', boxSizing: 'border-box' }}>
       
-      {/* 1. 목록 화면 */}
+      {/* 1. 메인 목록 화면 */}
       {viewMode === 'list' && (
         <div>
-          {/* 상단 헤더 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 0 16px' }}>
-            <span style={{ fontSize: '20px' }}>📱</span>
-            <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#0F172A', margin: 0 }}>(주)메이쓰 현장 관리</h2>
+          {/* 블루 그라데이션 상단 헤더 */}
+          <div style={{ background: 'linear-gradient(135deg, #1E60E8 0%, #0093E9 100%)', padding: '24px 20px 32px', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px', color: 'white' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <span style={{ fontSize: '20px', cursor: 'pointer' }}>☰</span>
+            </div>
+            
+            <h1 style={{ margin: '0 0 6px 0', fontSize: '24px', fontWeight: '800' }}>업체관리</h1>
+            <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>안녕하세요, 오늘도 좋은 하루 되세요.</p>
+
+            {/* 검색창 */}
+            <div style={{ position: 'relative', marginTop: '20px' }}>
+              <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>🔍</span>
+              <input 
+                type="text"
+                placeholder="업체명, 담당자명 검색..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '40px', backgroundColor: '#FFFFFF', border: 'none', borderRadius: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '46px' }}
+              />
+              <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8', fontSize: '14px' }}>⚡</span>
+            </div>
           </div>
 
-          {/* 검색창 */}
-          <div style={{ position: 'relative', marginBottom: '16px' }}>
-            <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>🔍</span>
-            <input 
-              type="text"
-              placeholder="업체명 검색..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ ...inputStyle, paddingLeft: '40px', backgroundColor: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
-            />
-          </div>
+          <div style={{ padding: '0 16px', marginTop: '-12px' }}>
+            {/* 상단 2개 대시보드 카드 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>🏢</div>
+                <div>
+                  <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '600', display: 'block' }}>전체 업체 수</span>
+                  <span style={{ fontSize: '24px', fontWeight: '800', color: '#1E293B' }}>{companies.length}</span>
+                </div>
+              </div>
 
-          {/* 신규 업체 등록 토글 */}
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', marginBottom: '16px' }}>
-            <div 
-              onClick={() => setShowAddForm(!showAddForm)} 
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#2563EB', fontWeight: '600', cursor: 'pointer', fontSize: '15px' }}
-            >
-              <span>{showAddForm ? '▲' : '▶'}</span>
-              <span>➕ 신규 업체 및 명함 등록</span>
+              <div 
+                onClick={() => setShowAddForm(!showAddForm)}
+                style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer', border: showAddForm ? '1px solid #2563EB' : '1px solid transparent' }}
+              >
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>➕</div>
+                <span style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B', display: 'block' }}>업체 등록하기</span>
+                <span style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px', display: 'block' }}>새로운 업체를 등록합니다.</span>
+              </div>
             </div>
 
+            {/* 신규 업체 등록 입력 폼 (토글) */}
             {showAddForm && (
-              <form onSubmit={handleAddCompany} style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
-                <input placeholder="업체명*" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
-                <input placeholder="담당자명" value={manager} onChange={(e) => setManager(e.target.value)} style={inputStyle} />
-                <input placeholder="연락처" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
-                <input placeholder="이메일" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
-                <input placeholder="주소" value={address} onChange={(e) => setAddress(e.target.value)} style={inputStyle} />
+              <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '20px' }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#1E293B' }}>➕ 신규 업체 등록</h4>
+                <form onSubmit={handleAddCompany} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <input placeholder="업체명*" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+                  <input placeholder="담당자명" value={manager} onChange={(e) => setManager(e.target.value)} style={inputStyle} />
+                  <input placeholder="연락처" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
+                  <input placeholder="이메일" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
+                  <input placeholder="주소" value={address} onChange={(e) => setAddress(e.target.value)} style={inputStyle} />
 
-                <button type="submit" disabled={uploading} style={{ padding: '12px', background: '#2563EB', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', marginTop: '4px', cursor: 'pointer' }}>
-                  {uploading ? '저장 중...' : '업체 등록'}
-                </button>
-              </form>
-            )}
-          </div>
-
-          {/* 업체 목록 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {filteredCompanies.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#64748B', backgroundColor: 'white', borderRadius: '12px' }}>
-                등록되었거나 검색된 업체가 없습니다.
+                  <button type="submit" disabled={uploading} style={{ padding: '12px', background: '#2563EB', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', marginTop: '4px', cursor: 'pointer' }}>
+                    {uploading ? '저장 중...' : '등록 완료'}
+                  </button>
+                </form>
               </div>
-            ) : (
-              filteredCompanies.map((c) => (
-                <div 
-                  key={c.id} 
-                  onClick={() => handleSelectCompany(c)}
-                  style={{ 
-                    padding: '16px', 
-                    borderRadius: '12px', 
-                    background: 'white',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                    border: '1px solid #E2E8F0'
-                  }}
-                >
-                  <h4 style={{ margin: '0 0 6px 0', color: '#1E293B', fontSize: '16px' }}>🏢 {c.name}</h4>
-                  <p style={{ margin: '2px 0', fontSize: '13px', color: '#64748B' }}>📞 {c.phone || '미등록'} | 👤 {c.manager || '미등록'}</p>
-                  <p style={{ margin: '2px 0', fontSize: '13px', color: '#64748B' }}>📍 {c.address || '미등록'}</p>
-                </div>
-              ))
             )}
+
+            {/* 업체 목록 제목 */}
+            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1E293B', margin: '0 0 12px 4px' }}>업체 목록</h3>
+
+            {/* 업체 목록 카드 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {filteredCompanies.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '30px', color: '#94A3B8', backgroundColor: 'white', borderRadius: '16px' }}>
+                  등록된 업체가 없습니다.
+                </div>
+              ) : (
+                filteredCompanies.map((c) => (
+                  <div 
+                    key={c.id} 
+                    onClick={() => handleSelectCompany(c)}
+                    style={{ 
+                      padding: '16px', 
+                      borderRadius: '16px', 
+                      background: 'white',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justify: 'space-between',
+                      border: '1px solid #F1F5F9'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🏢</div>
+                      <div>
+                        <h4 style={{ margin: '0 0 4px 0', color: '#1E293B', fontSize: '15px', fontWeight: '700' }}>{c.name}</h4>
+                        <span style={{ fontSize: '12px', color: '#64748B' }}>👤 담당자명 <strong style={{ color: '#334155', fontWeight: '600', marginLeft: '6px' }}>{c.manager || '미등록'}</strong></span>
+                      </div>
+                    </div>
+                    <span style={{ color: '#CBD5E1', fontSize: '16px' }}>›</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* 2. 업체 상세 화면 */}
       {viewMode === 'detail' && selectedCompany && (
-        <div>
+        <div style={{ padding: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0 16px' }}>
-            <button onClick={() => setViewMode('list')} style={{ border: 'none', background: 'none', fontSize: '18px', cursor: 'pointer', color: '#1E293B' }}>← 뒤로</button>
+            <button onClick={() => setViewMode('list')} style={{ border: 'none', background: 'none', fontSize: '16px', cursor: 'pointer', color: '#1E293B', fontWeight: '600' }}>← 뒤로</button>
             <h3 style={{ margin: 0, fontSize: '17px', color: '#0F172A' }}>{isEditing ? '업체 정보 수정' : '업체 상세'}</h3>
-            <span style={{ fontSize: '18px', color: '#94A3B8' }}>⋮</span>
+            <div style={{ width: '24px' }}></div>
           </div>
 
           <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: '16px' }}>
             {!isEditing ? (
-              /* 일반 조회 모드 */
               <>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -406,7 +438,6 @@ function App() {
                 </div>
               </>
             ) : (
-              /* 정보 수정 모드 */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>🏢 업체명*</label>
@@ -439,7 +470,6 @@ function App() {
             )}
           </div>
 
-          {/* 누적 서비스 이력 */}
           <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <h4 style={{ margin: '0 0 12px 0', color: '#1E293B' }}>📋 최근 서비스 이력 ({historyList.length})</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -455,7 +485,6 @@ function App() {
                       <button 
                         onClick={() => handleDeleteHistoryItem(h.id)}
                         style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 4px', color: '#EF4444' }}
-                        title="이력 삭제"
                       >
                         🗑️
                       </button>
@@ -471,9 +500,9 @@ function App() {
 
       {/* 3. 서비스 리포트 작성 화면 */}
       {viewMode === 'report' && selectedCompany && (
-        <div>
+        <div style={{ padding: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0 16px' }}>
-            <button onClick={() => setViewMode('detail')} style={{ border: 'none', background: 'none', fontSize: '18px', cursor: 'pointer', color: '#1E293B' }}>← 뒤로</button>
+            <button onClick={() => setViewMode('detail')} style={{ border: 'none', background: 'none', fontSize: '16px', cursor: 'pointer', color: '#1E293B', fontWeight: '600' }}>← 뒤로</button>
             <h3 style={{ margin: 0, fontSize: '17px', color: '#0F172A' }}>서비스 리포트 작성</h3>
             <div style={{ width: '24px' }}></div>
           </div>
@@ -580,6 +609,27 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* 하단 네비게이션 탭 바 */}
+      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', height: '60px', backgroundColor: '#FFFFFF', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-around', alignItems: 'center', zIndex: 100 }}>
+        <div onClick={() => { setViewMode('list'); setActiveTab('home'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: activeTab === 'home' ? '#2563EB' : '#94A3B8' }}>
+          <span style={{ fontSize: '18px' }}>🏠</span>
+          <span style={{ fontSize: '11px', fontWeight: '600', marginTop: '2px' }}>홈</span>
+        </div>
+        <div onClick={() => { setViewMode('list'); setActiveTab('companies'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: activeTab === 'companies' ? '#2563EB' : '#94A3B8' }}>
+          <span style={{ fontSize: '18px' }}>🏢</span>
+          <span style={{ fontSize: '11px', fontWeight: '600', marginTop: '2px' }}>업체목록</span>
+        </div>
+        <div onClick={() => { setViewMode('list'); setShowAddForm(true); setActiveTab('add'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: activeTab === 'add' ? '#2563EB' : '#94A3B8' }}>
+          <span style={{ fontSize: '18px' }}>➕</span>
+          <span style={{ fontSize: '11px', fontWeight: '600', marginTop: '2px' }}>등록</span>
+        </div>
+        <div onClick={() => setActiveTab('more')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: activeTab === 'more' ? '#2563EB' : '#94A3B8' }}>
+          <span style={{ fontSize: '18px' }}>•••</span>
+          <span style={{ fontSize: '11px', fontWeight: '600', marginTop: '2px' }}>더보기</span>
+        </div>
+      </div>
+
     </div>
   )
 }
