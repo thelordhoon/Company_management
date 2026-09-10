@@ -24,8 +24,7 @@ function App() {
   const [isEditing, setIsEditing] = useState(false)
   const [editData, setEditData] = useState({ 
     name: '', 
-    managers: [{ name: '', phone: '', role: '' }], 
-    email: '', 
+    managers: [{ name: '', phone: '', role: '', email: '' }], 
     address: '',
     ink: '',
     solvent: ''
@@ -34,9 +33,8 @@ function App() {
   // 신규 업체 입력 상태
   const [showAddForm, setShowAddForm] = useState(false)
   const [name, setName] = useState('')
-  const [managers, setManagers] = useState([{ name: '', phone: '', role: '' }])
+  const [managers, setManagers] = useState([{ name: '', phone: '', role: '', email: '' }])
   const [address, setAddress] = useState('')
-  const [email, setEmail] = useState('')
   const [ink, setInk] = useState('')
   const [solvent, setSolvent] = useState('')
 
@@ -83,22 +81,29 @@ function App() {
     if (!error) setAllHistories(data || [])
   }
 
-  // 담당자 목록 파싱 도우미
-  const parseManagers = (managerData, phoneData) => {
-    if (!managerData) return [{ name: '', phone: '', role: '' }]
+  // 담당자 목록 파싱 도우미 (이메일 호환 추가)
+  const parseManagers = (managerData, phoneData, defaultEmail) => {
+    if (!managerData) return [{ name: '', phone: '', role: '', email: defaultEmail || '' }]
     
     try {
       const parsed = typeof managerData === 'string' ? JSON.parse(managerData) : managerData
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map(m => ({
+          name: m.name || '',
+          phone: m.phone || '',
+          role: m.role || '',
+          email: m.email || ''
+        }))
+      }
     } catch (e) {
       // 기존 문자열 호환
     }
 
-    return [{ name: managerData || '', phone: phoneData || '', role: '' }]
+    return [{ name: managerData || '', phone: phoneData || '', role: '', email: defaultEmail || '' }]
   }
 
   const handleAddManagerField = () => {
-    setManagers([...managers, { name: '', phone: '', role: '' }])
+    setManagers([...managers, { name: '', phone: '', role: '', email: '' }])
   }
 
   const handleRemoveManagerField = (index) => {
@@ -113,7 +118,7 @@ function App() {
   }
 
   const handleEditAddManagerField = () => {
-    setEditData({ ...editData, managers: [...editData.managers, { name: '', phone: '', role: '' }] })
+    setEditData({ ...editData, managers: [...editData.managers, { name: '', phone: '', role: '', email: '' }] })
   }
 
   const handleEditRemoveManagerField = (index) => {
@@ -133,6 +138,7 @@ function App() {
 
     setUploading(true)
     const primaryPhone = managers[0]?.phone || ''
+    const primaryEmail = managers[0]?.email || ''
 
     const { error } = await supabase
       .from('companies')
@@ -140,8 +146,8 @@ function App() {
         name, 
         manager: JSON.stringify(managers),
         phone: primaryPhone,
+        email: primaryEmail,
         address, 
-        email,
         ink,
         solvent
       }])
@@ -152,8 +158,8 @@ function App() {
       alert('저장 실패: ' + error.message)
     } else {
       alert('업체가 등록되었습니다.')
-      setName(''); setAddress(''); setEmail(''); setInk(''); setSolvent('');
-      setManagers([{ name: '', phone: '', role: '' }])
+      setName(''); setAddress(''); setInk(''); setSolvent('');
+      setManagers([{ name: '', phone: '', role: '', email: '' }])
       setShowAddForm(false)
       fetchCompanies()
     }
@@ -170,7 +176,7 @@ function App() {
   }
 
   const handleSelectCompany = async (company) => {
-    const parsedManagers = parseManagers(company.manager, company.phone)
+    const parsedManagers = parseManagers(company.manager, company.phone, company.email)
     setSelectedCompany({ ...company, managersList: parsedManagers })
     setConfirmor(parsedManagers[0]?.name || '')
     setIsEditing(false)
@@ -178,7 +184,6 @@ function App() {
     setEditData({
       name: company.name || '',
       managers: parsedManagers,
-      email: company.email || '',
       address: company.address || '',
       ink: company.ink || '',
       solvent: company.solvent || ''
@@ -196,6 +201,7 @@ function App() {
 
     setUploading(true)
     const primaryPhone = editData.managers[0]?.phone || ''
+    const primaryEmail = editData.managers[0]?.email || ''
 
     const { data, error } = await supabase
       .from('companies')
@@ -203,7 +209,7 @@ function App() {
         name: editData.name,
         manager: JSON.stringify(editData.managers),
         phone: primaryPhone,
-        email: editData.email,
+        email: primaryEmail,
         address: editData.address,
         ink: editData.ink,
         solvent: editData.solvent
@@ -218,7 +224,7 @@ function App() {
     } else {
       alert('업체 정보가 수정되었습니다.')
       const updated = data && data.length > 0 ? data[0] : { ...selectedCompany, ...editData }
-      const updatedManagers = parseManagers(updated.manager, updated.phone)
+      const updatedManagers = parseManagers(updated.manager, updated.phone, updated.email)
       setSelectedCompany({ ...updated, managersList: updatedManagers })
       setIsEditing(false)
       fetchCompanies()
@@ -373,7 +379,7 @@ function App() {
                   value={companySearchTerm}
                   onChange={(e) => {
                     setCompanySearchTerm(e.target.value)
-                    if (e.target.value) setSnPartSearchTerm('') // 업체 검색 입력 시 S/N 검색 초기화
+                    if (e.target.value) setSnPartSearchTerm('')
                   }}
                   style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '36px', backgroundColor: '#FFFFFF', border: 'none', borderRadius: '12px', boxShadow: '0 3px 8px rgba(0,0,0,0.08)', height: '42px' }}
                 />
@@ -391,7 +397,7 @@ function App() {
                   value={snPartSearchTerm}
                   onChange={(e) => {
                     setSnPartSearchTerm(e.target.value)
-                    if (e.target.value) setCompanySearchTerm('') // S/N 검색 입력 시 업체 검색 초기화
+                    if (e.target.value) setCompanySearchTerm('')
                   }}
                   style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '36px', backgroundColor: '#FFFFFF', border: 'none', borderRadius: '12px', boxShadow: '0 3px 8px rgba(0,0,0,0.08)', height: '42px' }}
                 />
@@ -446,14 +452,12 @@ function App() {
                           <input placeholder="이름 (예: 홍길동)" value={m.name} onChange={(e) => handleManagerChange(idx, 'name', e.target.value)} style={inputStyle} />
                           <input placeholder="부서/직책 (예: 생산팀)" value={m.role} onChange={(e) => handleManagerChange(idx, 'role', e.target.value)} style={inputStyle} />
                         </div>
-                        <input placeholder="연락처 (예: 010-1234-5678)" value={m.phone} onChange={(e) => handleManagerChange(idx, 'phone', e.target.value)} style={inputStyle} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <input placeholder="연락처 (예: 010-1234-5678)" value={m.phone} onChange={(e) => handleManagerChange(idx, 'phone', e.target.value)} style={inputStyle} />
+                          <input placeholder="이메일 (예: user@company.com)" value={m.email} onChange={(e) => handleManagerChange(idx, 'email', e.target.value)} style={inputStyle} />
+                        </div>
                       </div>
                     ))}
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>✉️ 이메일</label>
-                    <input placeholder="이메일 주소" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
                   </div>
 
                   <div>
@@ -479,7 +483,7 @@ function App() {
               </div>
             )}
 
-            {/* 목록 타이틀: S/N 검색 시 '서비스 이력 검색 결과'로 가변 */}
+            {/* 목록 타이틀 */}
             <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1E293B', margin: '0 0 12px 4px' }}>
               {isSnSearching ? `📋 서비스 이력 검색 결과 (${filteredAllHistories.length})` : '🏢 업체 목록'}
             </h3>
@@ -549,7 +553,7 @@ function App() {
                   </div>
                 ) : (
                   filteredCompanies.map((c) => {
-                    const mList = parseManagers(c.manager, c.phone)
+                    const mList = parseManagers(c.manager, c.phone, c.email)
                     const displayManager = mList.map(m => m.name ? `${m.name}${m.role ? `(${m.role})` : ''}` : '').filter(Boolean).join(', ') || '미등록'
 
                     return (
@@ -616,15 +620,22 @@ function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
                   <div>
                     <span style={{ color: '#64748B', fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '6px' }}>👤 담당자 목록</span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {selectedCompany.managersList && selectedCompany.managersList.length > 0 ? (
                         selectedCompany.managersList.map((m, idx) => (
-                          <div key={idx} style={{ backgroundColor: '#F8FAFC', padding: '8px 12px', borderRadius: '8px', border: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                              <span style={{ fontWeight: '600', color: '#1E293B' }}>{m.name || '미입력'}</span>
-                              {m.role && <span style={{ fontSize: '12px', color: '#2563EB', marginLeft: '6px' }}>({m.role})</span>}
+                          <div key={idx} style={{ backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <div>
+                                <span style={{ fontWeight: '600', color: '#1E293B' }}>{m.name || '미입력'}</span>
+                                {m.role && <span style={{ fontSize: '12px', color: '#2563EB', marginLeft: '6px' }}>({m.role})</span>}
+                              </div>
+                              <span style={{ color: '#475569', fontSize: '13px', fontWeight: '500' }}>📞 {m.phone || '-'}</span>
                             </div>
-                            <span style={{ color: '#475569', fontSize: '13px' }}>{m.phone || '-'}</span>
+                            {m.email && (
+                              <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                                ✉️ {m.email}
+                              </div>
+                            )}
                           </div>
                         ))
                       ) : (
@@ -634,10 +645,6 @@ function App() {
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                    <span style={{ color: '#64748B' }}>✉️ 이메일</span>
-                    <span style={{ fontWeight: '500', color: '#1E293B' }}>{selectedCompany.email || '-'}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748B' }}>📍 주소</span>
                     <span style={{ fontWeight: '500', color: '#1E293B', textAlign: 'right', maxWidth: '60%' }}>{selectedCompany.address || '-'}</span>
                   </div>
@@ -680,15 +687,14 @@ function App() {
                         <input placeholder="이름" value={m.name} onChange={(e) => handleEditManagerChange(idx, 'name', e.target.value)} style={inputStyle} />
                         <input placeholder="부서/직책" value={m.role} onChange={(e) => handleEditManagerChange(idx, 'role', e.target.value)} style={inputStyle} />
                       </div>
-                      <input placeholder="연락처" value={m.phone} onChange={(e) => handleEditManagerChange(idx, 'phone', e.target.value)} style={inputStyle} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <input placeholder="연락처" value={m.phone} onChange={(e) => handleEditManagerChange(idx, 'phone', e.target.value)} style={inputStyle} />
+                        <input placeholder="이메일" value={m.email} onChange={(e) => handleEditManagerChange(idx, 'email', e.target.value)} style={inputStyle} />
+                      </div>
                     </div>
                   ))}
                 </div>
 
-                <div>
-                  <label style={labelStyle}>✉️ 이메일</label>
-                  <input value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} style={inputStyle} />
-                </div>
                 <div>
                   <label style={labelStyle}>📍 주소</label>
                   <input value={editData.address} onChange={(e) => setEditData({ ...editData, address: e.target.value })} style={inputStyle} />
