@@ -10,9 +10,10 @@ function App() {
   const [companies, setCompanies] = useState([])
   const [allHistories, setAllHistories] = useState([]) // 전체 서비스 이력 저장
   
-  // 메인 검색 상태
+  // 메인 검색 및 필터 상태
   const [companySearchTerm, setCompanySearchTerm] = useState('') // 업체명/담당자명 검색
   const [snPartSearchTerm, setSnPartSearchTerm] = useState('') // S/N / 부품명 검색
+  const [showRecentOnly, setShowRecentOnly] = useState(false) // 최근 등록 5개 업체 필터 상태
 
   // 상세보기 내 S/N 검색 상태
   const [detailSnSearchTerm, setDetailSnSearchTerm] = useState('')
@@ -69,7 +70,7 @@ function App() {
   }, [])
 
   const fetchCompanies = async () => {
-    const { data, error } = await supabase.from('companies').select('*').order('name', { ascending: true })
+    const { data, error } = await supabase.from('companies').select('*').order('created_at', { ascending: false })
     if (!error) setCompanies(data || [])
   }
 
@@ -317,10 +318,16 @@ function App() {
     }
   }
 
-  // 1) 업체 필터링
+  // 1) 업체 필터링 (검색어 및 최근 등록 5개 필터 적용)
+  let baseCompanies = [...companies].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  
+  if (showRecentOnly) {
+    baseCompanies = baseCompanies.slice(0, 5)
+  }
+
   const filteredCompanies = companySearchTerm.trim() === '' 
-    ? companies 
-    : companies.filter(c => 
+    ? baseCompanies 
+    : baseCompanies.filter(c => 
         (c.name && c.name.toLowerCase().includes(companySearchTerm.toLowerCase())) ||
         (c.manager && c.manager.toLowerCase().includes(companySearchTerm.toLowerCase()))
       )
@@ -415,17 +422,39 @@ function App() {
 
           <div style={{ padding: '0 16px', marginTop: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>🏢</div>
+              
+              {/* 최근 등록 업체 카드 */}
+              <div 
+                onClick={() => {
+                  setShowRecentOnly(!showRecentOnly)
+                  if (showAddForm) setShowAddForm(false)
+                }}
+                style={{ 
+                  backgroundColor: 'white', 
+                  borderRadius: '16px', 
+                  padding: '16px', 
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)', 
+                  cursor: 'pointer',
+                  border: showRecentOnly ? '2px solid #2563EB' : '2px solid transparent',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: showRecentOnly ? '#2563EB' : '#EFF6FF', color: showRecentOnly ? 'white' : '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>🆕</div>
                 <div>
-                  <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '600', display: 'block' }}>전체 업체 수</span>
-                  <span style={{ fontSize: '24px', fontWeight: '800', color: '#1E293B' }}>{companies.length}</span>
+                  <span style={{ fontSize: '13px', color: '#1E293B', fontWeight: '700', display: 'block' }}>최근 등록 업체</span>
+                  <span style={{ fontSize: '11px', color: showRecentOnly ? '#2563EB' : '#94A3B8', marginTop: '2px', display: 'block', fontWeight: showRecentOnly ? '600' : 'normal' }}>
+                    {showRecentOnly ? '✓ 상위 5개 보는 중' : '최근 등록업체 보기'}
+                  </span>
                 </div>
               </div>
 
+              {/* 업체 등록하기 카드 */}
               <div 
-                onClick={() => setShowAddForm(!showAddForm)}
-                style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer', border: showAddForm ? '1px solid #2563EB' : '1px solid transparent' }}
+                onClick={() => {
+                  setShowAddForm(!showAddForm)
+                  if (showRecentOnly) setShowRecentOnly(false)
+                }}
+                style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer', border: showAddForm ? '2px solid #2563EB' : '2px solid transparent' }}
               >
                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>➕</div>
                 <span style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B', display: 'block' }}>업체 등록하기</span>
@@ -471,9 +500,9 @@ function App() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>📌 메모</label>
+                    <label style={labelStyle}>📌 비고</label>
                     <textarea 
-                      placeholder="메모 사항을 입력하세요" 
+                      placeholder="비고 사항을 입력하세요" 
                       rows="3" 
                       value={note} 
                       onChange={(e) => setNote(e.target.value)} 
@@ -500,9 +529,20 @@ function App() {
             )}
 
             {/* 목록 타이틀 */}
-            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1E293B', margin: '0 0 12px 4px' }}>
-              {isSnSearching ? `📋 서비스 이력 검색 결과 (${filteredAllHistories.length})` : '🏢 업체 목록'}
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 4px 12px 4px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1E293B', margin: 0 }}>
+                {isSnSearching 
+                  ? `📋 서비스 이력 검색 결과 (${filteredAllHistories.length})` 
+                  : showRecentOnly 
+                    ? `🆕 최근 등록 업체 (최대 5개)` 
+                    : `🏢 업체 목록 (${filteredCompanies.length})`}
+              </h3>
+              {showRecentOnly && (
+                <span onClick={() => setShowRecentOnly(false)} style={{ fontSize: '12px', color: '#2563EB', cursor: 'pointer', fontWeight: '600' }}>
+                  전체 보기 ✕
+                </span>
+              )}
+            </div>
 
             {/* A. S/N 또는 사용부품 검색 결과 출력 */}
             {isSnSearching ? (
@@ -561,7 +601,7 @@ function App() {
                 )}
               </div>
             ) : (
-              /* B. 기존 업체 목록 출력 */
+              /* B. 업체 목록 출력 */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {filteredCompanies.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '30px', color: '#94A3B8', backgroundColor: 'white', borderRadius: '16px' }}>
@@ -665,11 +705,11 @@ function App() {
                     <span style={{ fontWeight: '500', color: '#1E293B', textAlign: 'right', maxWidth: '60%' }}>{selectedCompany.address || '-'}</span>
                   </div>
 
-                  {/* 주소 바로 아래 추가된 비고 영역 */}
+                  {/* 주소 바로 아래 비고 영역 */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                     <span style={{ color: '#64748B', fontSize: '13px', fontWeight: '600' }}>📌 비고</span>
                     <div style={{ backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid #F1F5F9', color: '#334155', whiteSpace: 'pre-wrap', minHeight: '38px', fontSize: '13px' }}>
-                      {selectedCompany.card_url || <span style={{ color: '#94A3B8' }}>등록된 메모가 없습니다.</span>}
+                      {selectedCompany.card_url || <span style={{ color: '#94A3B8' }}>등록된 비고 사항이 없습니다.</span>}
                     </div>
                   </div>
 
