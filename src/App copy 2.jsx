@@ -8,32 +8,12 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 function App() {
   const [companies, setCompanies] = useState([])
-  const [allHistories, setAllHistories] = useState([])
+  const [allHistories, setAllHistories] = useState([]) // 전체 서비스 이력 저장
   
-  // 메인 탭 전환 ('companies' | 'parts')
-  const [mainTab, setMainTab] = useState('companies')
-  
-  // 부품 목록 및 등록 상태
-  const [partsList, setPartsList] = useState([])
-  const [partSearchTerm, setPartSearchTerm] = useState('')
-  const [showAddPartForm, setShowAddPartForm] = useState(false)
-  
-  // 신규 부품 입력 폼 상태
-  const [partName, setPartName] = useState('')
-  const [partCode, setPartCode] = useState('')
-  const [partCategory, setPartCategory] = useState('일반부품')
-  const [dealerPrice, setDealerPrice] = useState(0)
-  const [customerPrice, setCustomerPrice] = useState(0)
-  const [stock, setStock] = useState(0)
-  const [partNote, setPartNote] = useState('')
-  
-  // 업체별 특가 단가 상태 [{ company_name: '', price: 0 }]
-  const [companyPrices, setCompanyPrices] = useState([])
-
-  // 메인 검색 및 필터 상태 (업체용)
-  const [companySearchTerm, setCompanySearchTerm] = useState('')
-  const [snPartSearchTerm, setSnPartSearchTerm] = useState('')
-  const [showRecentOnly, setShowRecentOnly] = useState(false)
+  // 메인 검색 및 필터 상태
+  const [companySearchTerm, setCompanySearchTerm] = useState('') // 업체명/담당자명 검색
+  const [snPartSearchTerm, setSnPartSearchTerm] = useState('') // S/N / 부품명 검색
+  const [showRecentOnly, setShowRecentOnly] = useState(false) // 최근 등록 5개 업체 필터 상태
 
   // 상세보기 내 S/N 검색 상태
   const [detailSnSearchTerm, setDetailSnSearchTerm] = useState('')
@@ -47,7 +27,7 @@ function App() {
     name: '', 
     managers: [{ name: '', phone: '', role: '', email: '' }], 
     address: '',
-    note: '',
+    note: '', // DB의 card_url 매핑
     ink: '',
     solvent: ''
   })
@@ -57,7 +37,7 @@ function App() {
   const [name, setName] = useState('')
   const [managers, setManagers] = useState([{ name: '', phone: '', role: '', email: '' }])
   const [address, setAddress] = useState('')
-  const [note, setNote] = useState('')
+  const [note, setNote] = useState('') // DB의 card_url 매핑
   const [ink, setInk] = useState('')
   const [solvent, setSolvent] = useState('')
 
@@ -76,7 +56,7 @@ function App() {
   const [sn, setSn] = useState('')
   const [modelName, setModelName] = useState('JET2Neo')
   const [workContent, setWorkContent] = useState('')
-  const [usedParts, setUsedParts] = useState(['', ''])
+  const [parts, setParts] = useState(['', ''])
   const [confirmor, setConfirmor] = useState('')
 
   const [historyList, setHistoryList] = useState([])
@@ -87,7 +67,6 @@ function App() {
   useEffect(() => {
     fetchCompanies()
     fetchAllServiceHistories()
-    fetchParts()
   }, [])
 
   const fetchCompanies = async () => {
@@ -95,6 +74,7 @@ function App() {
     if (!error) setCompanies(data || [])
   }
 
+  // 메인 통합 검색용 전체 서비스 이력 조회
   const fetchAllServiceHistories = async () => {
     const { data, error } = await supabase
       .from('service_history')
@@ -104,82 +84,7 @@ function App() {
     if (!error) setAllHistories(data || [])
   }
 
-  // 부품 목록 조회
-  const fetchParts = async () => {
-    const { data, error } = await supabase.from('parts').select('*').order('created_at', { ascending: false })
-    if (!error) setPartsList(data || [])
-  }
-
-  // 업체별 특가 입력 필드 관련 핸들러
-  const handleAddCompanyPriceField = () => {
-    setCompanyPrices([...companyPrices, { company_name: '', price: 0 }])
-  }
-
-  const handleRemoveCompanyPriceField = (index) => {
-    setCompanyPrices(companyPrices.filter((_, i) => i !== index))
-  }
-
-  const handleCompanyPriceChange = (index, field, value) => {
-    const updated = [...companyPrices]
-    updated[index][field] = value
-    setCompanyPrices(updated)
-  }
-
-  // 부품 등록
-  const handleAddPart = async (e) => {
-    e.preventDefault()
-    if (!partName.trim()) return alert('부품명을 입력해주세요!')
-    if (!partCode.trim()) return alert('부품 코드/품번을 입력해주세요!')
-
-    setUploading(true)
-    const { error } = await supabase.from('parts').insert([{
-      name: partName,
-      code: partCode,
-      category: partCategory,
-      dealer_price: Number(dealerPrice),
-      customer_price: Number(customerPrice),
-      stock: Number(stock),
-      company_prices: JSON.stringify(companyPrices), // 업체별 특가 데이터
-      note: partNote
-    }])
-
-    setUploading(false)
-
-    if (error) {
-      alert('부품 저장 실패: ' + error.message)
-    } else {
-      alert('신규 부품이 등록되었습니다.')
-      setPartName(''); setPartCode(''); setPartCategory('일반부품');
-      setDealerPrice(0); setCustomerPrice(0); setStock(0); setPartNote('');
-      setCompanyPrices([])
-      setShowAddPartForm(false)
-      fetchParts()
-    }
-  }
-
-  // 부품 재고 증감 (+ / -)
-  const handleUpdateStock = async (partId, currentStock, delta) => {
-    const newStock = Math.max(0, currentStock + delta)
-    const { error } = await supabase
-      .from('parts')
-      .update({ stock: newStock })
-      .eq('id', partId)
-
-    if (!error) {
-      setPartsList(prev => prev.map(p => p.id === partId ? { ...p, stock: newStock } : p))
-    }
-  }
-
-  // 부품 삭제
-  const handleDeletePart = async (partId) => {
-    if (!window.confirm('이 부품을 삭제하시겠습니까?')) return
-    const { error } = await supabase.from('parts').delete().eq('id', partId)
-    if (!error) {
-      alert('부품이 삭제되었습니다.')
-      fetchParts()
-    }
-  }
-
+  // 담당자 목록 파싱 도우미
   const parseManagers = (managerData, phoneData, defaultEmail) => {
     if (!managerData) return [{ name: '', phone: '', role: '', email: defaultEmail || '' }]
     
@@ -193,7 +98,9 @@ function App() {
           email: m.email || ''
         }))
       }
-    } catch (e) {}
+    } catch (e) {
+      // 기존 문자열 호환
+    }
 
     return [{ name: managerData || '', phone: phoneData || '', role: '', email: defaultEmail || '' }]
   }
@@ -244,7 +151,7 @@ function App() {
         phone: primaryPhone,
         email: primaryEmail,
         address, 
-        card_url: note,
+        card_url: note, // 비고 데이터를 card_url에 저장
         ink,
         solvent
       }])
@@ -309,7 +216,7 @@ function App() {
         phone: primaryPhone,
         email: primaryEmail,
         address: editData.address,
-        card_url: editData.note,
+        card_url: editData.note, // 비고 데이터를 card_url에 저장
         ink: editData.ink,
         solvent: editData.solvent
       })
@@ -333,7 +240,7 @@ function App() {
   const handleDeleteCompany = async (id) => {
     if (!window.confirm('해당 업체의 모든 서비스 이력과 정보가 삭제됩니다. 정말 삭제하시겠습니까?')) return
     
-    await supabase.from('service_history').delete().eq('id', id)
+    await supabase.from('service_history').delete().eq('company_id', id)
     const { error } = await supabase.from('companies').delete().eq('id', id)
     
     if (!error) {
@@ -389,7 +296,7 @@ function App() {
           sn,
           model_name: modelName,
           work_content: workContent,
-          parts: JSON.stringify(usedParts),
+          parts: JSON.stringify(parts),
           confirmor
         }])
 
@@ -399,7 +306,7 @@ function App() {
         alert('서비스 리포트가 성공적으로 저장되었습니다!')
         setWorkContent('')
         setSn('')
-        setUsedParts(['', ''])
+        setParts(['', ''])
         clearSignature()
         fetchAllServiceHistories()
         handleSelectCompany(selectedCompany)
@@ -411,9 +318,12 @@ function App() {
     }
   }
 
-  // 업체 필터링
+  // 1) 업체 필터링 (검색어 및 최근 등록 5개 필터 적용)
   let baseCompanies = [...companies].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-  if (showRecentOnly) baseCompanies = baseCompanies.slice(0, 5)
+  
+  if (showRecentOnly) {
+    baseCompanies = baseCompanies.slice(0, 5)
+  }
 
   const filteredCompanies = companySearchTerm.trim() === '' 
     ? baseCompanies 
@@ -422,15 +332,7 @@ function App() {
         (c.manager && c.manager.toLowerCase().includes(companySearchTerm.toLowerCase()))
       )
 
-  // 부품 필터링
-  const filteredParts = partSearchTerm.trim() === ''
-    ? partsList
-    : partsList.filter(p => 
-        (p.name && p.name.toLowerCase().includes(partSearchTerm.toLowerCase())) ||
-        (p.code && p.code.toLowerCase().includes(partSearchTerm.toLowerCase()))
-      )
-
-  // S/N 검색 필터링
+  // 2) S/N 및 사용부품 검색어 기준 서비스 이력 필터링
   const isSnSearching = snPartSearchTerm.trim() !== ''
   const filteredAllHistories = !isSnSearching ? [] : allHistories.filter(h => {
     const term = snPartSearchTerm.toLowerCase()
@@ -439,6 +341,7 @@ function App() {
     return snMatch || partsMatch
   })
 
+  // 상세 페이지 내 S/N 필터링
   const filteredDetailHistory = detailSnSearchTerm.trim() === ''
     ? historyList
     : historyList.filter(h => h.sn && h.sn.toLowerCase().includes(detailSnSearchTerm.toLowerCase()))
@@ -474,111 +377,57 @@ function App() {
               <span style={{ fontSize: '20px', cursor: 'pointer' }}>☰</span>
             </div>
             
-            <h1 style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '800' }}>
-              {mainTab === 'companies' ? '업체관리' : '부품/재고 관리'}
-            </h1>
+            <h1 style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '800' }}>업체관리</h1>
             <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>안녕하세요, 오늘도 좋은 하루 되세요.</p>
 
-            {/* 메인 탭 */}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '16px', backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px', borderRadius: '12px' }}>
-              <button
-                onClick={() => setMainTab('companies')}
-                style={{
-                  flex: 1,
-                  padding: '8px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: mainTab === 'companies' ? 'white' : 'transparent',
-                  color: mainTab === 'companies' ? '#1E60E8' : 'white',
-                  fontWeight: '700',
-                  fontSize: '13px',
-                  cursor: 'pointer'
-                }}
-              >
-                🏢 업체 목록
-              </button>
-              <button
-                onClick={() => setMainTab('parts')}
-                style={{
-                  flex: 1,
-                  padding: '8px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: mainTab === 'parts' ? 'white' : 'transparent',
-                  color: mainTab === 'parts' ? '#1E60E8' : 'white',
-                  fontWeight: '700',
-                  fontSize: '13px',
-                  cursor: 'pointer'
-                }}
-              >
-                🔧 부품 재고 목록
-              </button>
-            </div>
+            {/* 검색창 2개 조합 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+              {/* 업체명/담당자명 검색 */}
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>🏢</span>
+                <input 
+                  type="text"
+                  placeholder="업체명, 담당자명 검색..." 
+                  value={companySearchTerm}
+                  onChange={(e) => {
+                    setCompanySearchTerm(e.target.value)
+                    if (e.target.value) setSnPartSearchTerm('')
+                  }}
+                  style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '36px', backgroundColor: '#FFFFFF', border: 'none', borderRadius: '12px', boxShadow: '0 3px 8px rgba(0,0,0,0.08)', height: '42px' }}
+                />
+                {companySearchTerm && (
+                  <span onClick={() => setCompanySearchTerm('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8', cursor: 'pointer', fontSize: '14px' }}>✕</span>
+                )}
+              </div>
 
-            {/* 검색창 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-              {mainTab === 'companies' ? (
-                <>
-                  <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>🏢</span>
-                    <input 
-                      type="text"
-                      placeholder="업체명, 담당자명 검색..." 
-                      value={companySearchTerm}
-                      onChange={(e) => {
-                        setCompanySearchTerm(e.target.value)
-                        if (e.target.value) setSnPartSearchTerm('')
-                      }}
-                      style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '36px', backgroundColor: '#FFFFFF', border: 'none', borderRadius: '12px', boxShadow: '0 3px 8px rgba(0,0,0,0.08)', height: '42px' }}
-                    />
-                    {companySearchTerm && (
-                      <span onClick={() => setCompanySearchTerm('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8', cursor: 'pointer', fontSize: '14px' }}>✕</span>
-                    )}
-                  </div>
-
-                  <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>🔩</span>
-                    <input 
-                      type="text"
-                      placeholder="S/N 또는 사용부품 검색..." 
-                      value={snPartSearchTerm}
-                      onChange={(e) => {
-                        setSnPartSearchTerm(e.target.value)
-                        if (e.target.value) setCompanySearchTerm('')
-                      }}
-                      style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '36px', backgroundColor: '#FFFFFF', border: 'none', borderRadius: '12px', boxShadow: '0 3px 8px rgba(0,0,0,0.08)', height: '42px' }}
-                    />
-                    {snPartSearchTerm && (
-                      <span onClick={() => setSnPartSearchTerm('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8', cursor: 'pointer', fontSize: '14px' }}>✕</span>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>🔧</span>
-                  <input 
-                    type="text"
-                    placeholder="부품명, 품번 검색..." 
-                    value={partSearchTerm}
-                    onChange={(e) => setPartSearchTerm(e.target.value)}
-                    style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '36px', backgroundColor: '#FFFFFF', border: 'none', borderRadius: '12px', boxShadow: '0 3px 8px rgba(0,0,0,0.08)', height: '42px' }}
-                  />
-                  {partSearchTerm && (
-                    <span onClick={() => setPartSearchTerm('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8', cursor: 'pointer', fontSize: '14px' }}>✕</span>
-                  )}
-                </div>
-              )}
+              {/* S/N / 부품명 검색 */}
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>🔩</span>
+                <input 
+                  type="text"
+                  placeholder="S/N 또는 사용부품 검색..." 
+                  value={snPartSearchTerm}
+                  onChange={(e) => {
+                    setSnPartSearchTerm(e.target.value)
+                    if (e.target.value) setCompanySearchTerm('')
+                  }}
+                  style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '36px', backgroundColor: '#FFFFFF', border: 'none', borderRadius: '12px', boxShadow: '0 3px 8px rgba(0,0,0,0.08)', height: '42px' }}
+                />
+                {snPartSearchTerm && (
+                  <span onClick={() => setSnPartSearchTerm('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8', cursor: 'pointer', fontSize: '14px' }}>✕</span>
+                )}
+              </div>
             </div>
           </div>
 
           <div style={{ padding: '0 16px', marginTop: '16px' }}>
-            
-            {/* 상단 버튼 라인 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+              
+              {/* 최근 등록 업체 카드 */}
               <div 
                 onClick={() => {
-                  setMainTab('parts')
-                  setShowAddPartForm(true)
+                  setShowRecentOnly(!showRecentOnly)
+                  if (showAddForm) setShowAddForm(false)
                 }}
                 style={{ 
                   backgroundColor: 'white', 
@@ -586,30 +435,26 @@ function App() {
                   padding: '16px', 
                   boxShadow: '0 2px 8px rgba(0,0,0,0.04)', 
                   cursor: 'pointer',
-                  border: mainTab === 'parts' && showAddPartForm ? '2px solid #2563EB' : '2px solid transparent'
+                  border: showRecentOnly ? '2px solid #2563EB' : '2px solid transparent',
+                  transition: 'all 0.2s ease'
                 }}
               >
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>🔧</div>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: showRecentOnly ? '#2563EB' : '#EFF6FF', color: showRecentOnly ? 'white' : '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>🆕</div>
                 <div>
-                  <span style={{ fontSize: '13px', color: '#1E293B', fontWeight: '700', display: 'block' }}>부품 등록하기</span>
-                  <span style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px', display: 'block' }}>새로운 부품을 등록합니다</span>
+                  <span style={{ fontSize: '13px', color: '#1E293B', fontWeight: '700', display: 'block' }}>최근 등록 업체</span>
+                  <span style={{ fontSize: '11px', color: showRecentOnly ? '#2563EB' : '#94A3B8', marginTop: '2px', display: 'block', fontWeight: showRecentOnly ? '600' : 'normal' }}>
+                    {showRecentOnly ? '✓ 상위 5개 보는 중' : '최근 등록업체 보기'}
+                  </span>
                 </div>
               </div>
 
+              {/* 업체 등록하기 카드 */}
               <div 
                 onClick={() => {
-                  setMainTab('companies')
                   setShowAddForm(!showAddForm)
                   if (showRecentOnly) setShowRecentOnly(false)
                 }}
-                style={{ 
-                  backgroundColor: 'white', 
-                  borderRadius: '16px', 
-                  padding: '16px', 
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)', 
-                  cursor: 'pointer', 
-                  border: mainTab === 'companies' && showAddForm ? '2px solid #2563EB' : '2px solid transparent' 
-                }}
+                style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer', border: showAddForm ? '2px solid #2563EB' : '2px solid transparent' }}
               >
                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>➕</div>
                 <span style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B', display: 'block' }}>업체 등록하기</span>
@@ -617,125 +462,8 @@ function App() {
               </div>
             </div>
 
-            {/* 신규 부품 등록 폼 (요청 항목 순서대로 구성) */}
-            {mainTab === 'parts' && showAddPartForm && (
-              <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '20px' }}>
-                <h4 style={{ margin: '0 0 14px 0', fontSize: '16px', color: '#1E293B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>🔧 신규 부품 등록</span>
-                  <button type="button" onClick={() => setShowAddPartForm(false)} style={{ border: 'none', background: 'none', color: '#94A3B8', fontSize: '16px', cursor: 'pointer' }}>✕</button>
-                </h4>
-                
-                <form onSubmit={handleAddPart} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  
-                  {/* 1. 부품 코드/품번, 부품명 */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={labelStyle}>부품 코드/품번 *</label>
-                      <input placeholder="예: INK-001" value={partCode} onChange={(e) => setPartCode(e.target.value)} style={inputStyle} required />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>부품명 *</label>
-                      <input placeholder="예: 잉크 (Black)" value={partName} onChange={(e) => setPartName(e.target.value)} style={inputStyle} required />
-                    </div>
-                  </div>
-
-                  {/* 2. 카테고리 & 초기 재고 수량 */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={labelStyle}>카테고리</label>
-                      <select value={partCategory} onChange={(e) => setPartCategory(e.target.value)} style={inputStyle}>
-                        <option value="일반부품">일반부품</option>
-                        <option value="소모품">소모품</option>
-                        <option value="필터류">필터류</option>
-                        <option value="기타">기타</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={labelStyle}>초기 재고 수량</label>
-                      <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} style={inputStyle} />
-                    </div>
-                  </div>
-
-                  {/* 3. 가격 정보 (소비자 기본가, 딜러 기본가) */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={labelStyle}>소비자 기본가격 (원)</label>
-                      <input type="number" placeholder="0" value={customerPrice} onChange={(e) => setCustomerPrice(e.target.value)} style={inputStyle} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>딜러 기본가격 (원)</label>
-                      <input type="number" placeholder="0" value={dealerPrice} onChange={(e) => setDealerPrice(e.target.value)} style={inputStyle} />
-                    </div>
-                  </div>
-
-                  {/* 4. 업체별 개별 단가 (선택) */}
-                  <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <div>
-                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#1E293B' }}>업체별 개별 단가 (선택)</span>
-                        <span style={{ fontSize: '11px', color: '#94A3B8', display: 'block' }}>특정 거래처의 공급가를 지정합니다.</span>
-                      </div>
-                      <button 
-                        type="button" 
-                        onClick={handleAddCompanyPriceField}
-                        style={{ border: 'none', background: '#EFF6FF', color: '#2563EB', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                      >
-                        + 업체 추가
-                      </button>
-                    </div>
-
-                    {companyPrices.map((cp, idx) => (
-                      <div key={idx} style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '8px', backgroundColor: '#F8FAFC', padding: '8px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                        {/* 등록된 업체 선택 드롭다운 */}
-                        <select 
-                          value={cp.company_name} 
-                          onChange={(e) => handleCompanyPriceChange(idx, 'company_name', e.target.value)}
-                          style={{ ...inputStyle, flex: 1.2 }}
-                        >
-                          <option value="">업체 선택</option>
-                          {companies.map(c => (
-                            <option key={c.id} value={c.name}>{c.name}</option>
-                          ))}
-                        </select>
-                        <input 
-                          type="number" 
-                          placeholder="특가 (원)" 
-                          value={cp.price} 
-                          onChange={(e) => handleCompanyPriceChange(idx, 'price', e.target.value)}
-                          style={{ ...inputStyle, flex: 1 }}
-                        />
-                        <button 
-                          type="button" 
-                          onClick={() => handleRemoveCompanyPriceField(idx)} 
-                          style={{ border: 'none', background: 'none', color: '#EF4444', fontSize: '14px', cursor: 'pointer', padding: '4px 8px' }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* 5. 비고 */}
-                  <div>
-                    <label style={labelStyle}>📌 비고</label>
-                    <textarea rows="2" placeholder="메모 및 특이사항 입력" value={partNote} onChange={(e) => setPartNote(e.target.value)} style={inputStyle} />
-                  </div>
-
-                  {/* 6. 하단 버튼 영역 */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '6px' }}>
-                    <button type="button" onClick={() => setShowAddPartForm(false)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #CBD5E1', background: 'white', color: '#64748B', fontWeight: '600', cursor: 'pointer' }}>
-                      취소
-                    </button>
-                    <button type="submit" disabled={uploading} style={{ padding: '12px', background: '#2563EB', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>
-                      {uploading ? '저장 중...' : '부품 등록'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
             {/* 신규 업체 등록 폼 */}
-            {mainTab === 'companies' && showAddForm && (
+            {showAddForm && (
               <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '20px' }}>
                 <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#1E293B' }}>➕ 신규 업체 등록</h4>
                 <form onSubmit={handleAddCompany} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -800,219 +528,122 @@ function App() {
               </div>
             )}
 
-            {/* TAB A: 업체 목록 화면 */}
-            {mainTab === 'companies' && (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 4px 12px 4px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1E293B', margin: 0 }}>
-                    {isSnSearching 
-                      ? `📋 서비스 이력 검색 결과 (${filteredAllHistories.length})` 
-                      : showRecentOnly 
-                        ? `🆕 최근 등록 업체 (최대 5개)` 
-                        : `🏢 업체 목록 (${filteredCompanies.length})`}
-                  </h3>
-                  {showRecentOnly && (
-                    <span onClick={() => setShowRecentOnly(false)} style={{ fontSize: '12px', color: '#2563EB', cursor: 'pointer', fontWeight: '600' }}>
-                      전체 보기 ✕
-                    </span>
-                  )}
-                </div>
+            {/* 목록 타이틀 */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 4px 12px 4px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1E293B', margin: 0 }}>
+                {isSnSearching 
+                  ? `📋 서비스 이력 검색 결과 (${filteredAllHistories.length})` 
+                  : showRecentOnly 
+                    ? `🆕 최근 등록 업체 (최대 5개)` 
+                    : `🏢 업체 목록 (${filteredCompanies.length})`}
+              </h3>
+              {showRecentOnly && (
+                <span onClick={() => setShowRecentOnly(false)} style={{ fontSize: '12px', color: '#2563EB', cursor: 'pointer', fontWeight: '600' }}>
+                  전체 보기 ✕
+                </span>
+              )}
+            </div>
 
-                {isSnSearching ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {filteredAllHistories.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '30px', color: '#94A3B8', backgroundColor: 'white', borderRadius: '16px' }}>
-                        검색된 서비스 이력이 없습니다.
-                      </div>
-                    ) : (
-                      filteredAllHistories.map((h) => {
-                        const comp = companies.find(c => c.id === h.company_id)
-                        let parsedParts = []
-                        try {
-                          if (h.parts) {
-                            const temp = typeof h.parts === 'string' ? JSON.parse(h.parts) : h.parts
-                            parsedParts = Array.isArray(temp) ? temp.filter(p => p && p.trim() !== '') : []
-                          }
-                        } catch (e) {}
-
-                        return (
-                          <div 
-                            key={h.id} 
-                            onClick={() => comp && handleSelectCompany(comp)}
-                            style={{ 
-                              padding: '14px', 
-                              borderRadius: '14px', 
-                              backgroundColor: 'white', 
-                              border: '1px solid #E2E8F0',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                              cursor: comp ? 'pointer' : 'default'
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid #F1F5F9' }}>
-                              <span style={{ fontSize: '14px', fontWeight: '700', color: '#2563EB' }}>
-                                🏢 {comp ? comp.name : '미지정 업체'}
-                              </span>
-                              <span style={{ fontSize: '12px', color: '#64748B' }}>
-                                {h.work_date}
-                              </span>
-                            </div>
-
-                            <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#334155' }}>
-                              <b>S/N:</b> <span style={{ color: '#0284C7', fontWeight: '600' }}>{h.sn || '없음'}</span>
-                            </p>
-                            <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#334155' }}>
-                              <b>작업내용:</b> {h.work_content || '-'}
-                            </p>
-                            <p style={{ margin: 0, fontSize: '13px', color: '#334155' }}>
-                              <b>교체 파트:</b> {parsedParts.length > 0 ? parsedParts.join(', ') : '없음'}
-                            </p>
-                          </div>
-                        )
-                      })
-                    )}
+            {/* A. S/N 또는 사용부품 검색 결과 출력 */}
+            {isSnSearching ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {filteredAllHistories.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '30px', color: '#94A3B8', backgroundColor: 'white', borderRadius: '16px' }}>
+                    검색된 서비스 이력이 없습니다.
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {filteredCompanies.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '30px', color: '#94A3B8', backgroundColor: 'white', borderRadius: '16px' }}>
-                        등록된 업체가 없습니다.
-                      </div>
-                    ) : (
-                      filteredCompanies.map((c) => {
-                        const mList = parseManagers(c.manager, c.phone, c.email)
-                        const displayManager = mList.map(m => m.name ? `${m.name}${m.role ? `(${m.role})` : ''}` : '').filter(Boolean).join(', ') || '미등록'
+                  filteredAllHistories.map((h) => {
+                    const comp = companies.find(c => c.id === h.company_id)
+                    let parsedParts = []
+                    try {
+                      if (h.parts) {
+                        const temp = typeof h.parts === 'string' ? JSON.parse(h.parts) : h.parts
+                        parsedParts = Array.isArray(temp) ? temp.filter(p => p && p.trim() !== '') : []
+                      }
+                    } catch (e) {
+                      parsedParts = []
+                    }
 
-                        return (
-                          <div 
-                            key={c.id} 
-                            onClick={() => handleSelectCompany(c)}
-                            style={{ 
-                              padding: '16px', 
-                              borderRadius: '16px', 
-                              background: 'white',
-                              cursor: 'pointer',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justify: 'space-between',
-                              border: '1px solid #F1F5F9'
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
-                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>🏢</div>
-                              <div style={{ overflow: 'hidden' }}>
-                                <h4 style={{ margin: '0 0 4px 0', color: '#1E293B', fontSize: '15px', fontWeight: '700' }}>{c.name}</h4>
-                                <span style={{ fontSize: '12px', color: '#64748B', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  👤 담당자: <strong style={{ color: '#334155', fontWeight: '600' }}>{displayManager}</strong>
-                                </span>
-                              </div>
-                            </div>
-                            <span style={{ color: '#CBD5E1', fontSize: '16px', marginLeft: '8px' }}>›</span>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* TAB B: 부품 목록 & 재고 관리 화면 */}
-            {mainTab === 'parts' && (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 4px 12px 4px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1E293B', margin: 0 }}>
-                    🔧 등록된 부품 목록 ({filteredParts.length})
-                  </h3>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {filteredParts.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '30px', color: '#94A3B8', backgroundColor: 'white', borderRadius: '16px' }}>
-                      등록된 부품이 없습니다.
-                    </div>
-                  ) : (
-                    filteredParts.map((p) => {
-                      let parsedCompanyPrices = []
-                      try {
-                        if (p.company_prices) {
-                          const temp = typeof p.company_prices === 'string' ? JSON.parse(p.company_prices) : p.company_prices
-                          parsedCompanyPrices = Array.isArray(temp) ? temp : []
-                        }
-                      } catch (e) {}
-
-                      return (
-                        <div 
-                          key={p.id}
-                          style={{
-                            backgroundColor: 'white',
-                            borderRadius: '16px',
-                            padding: '16px',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                            border: '1px solid #E2E8F0'
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                            <div>
-                              <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#2563EB', marginRight: '6px' }}>
-                                {p.category || '일반부품'}
-                              </span>
-                              {p.code && <span style={{ fontSize: '12px', color: '#94A3B8' }}>#{p.code}</span>}
-                              <h4 style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: '700', color: '#1E293B' }}>{p.name}</h4>
-                            </div>
-                            <button 
-                              onClick={() => handleDeletePart(p.id)}
-                              style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', fontSize: '14px', padding: 0 }}
-                            >
-                              🗑️
-                            </button>
-                          </div>
-
-                          {/* 단가 정보 영역 */}
-                          <div style={{ backgroundColor: '#F8FAFC', padding: '10px', borderRadius: '10px', fontSize: '12px', marginBottom: '12px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: parsedCompanyPrices.length > 0 ? '8px' : '0' }}>
-                              <div>
-                                <span style={{ color: '#64748B', display: 'block' }}>소비자 기본가</span>
-                                <span style={{ fontWeight: '700', color: '#2563EB', fontSize: '13px' }}>
-                                  {p.customer_price ? Number(p.customer_price).toLocaleString() : 0} 원
-                                </span>
-                              </div>
-                              <div>
-                                <span style={{ color: '#64748B', display: 'block' }}>딜러 기본가</span>
-                                <span style={{ fontWeight: '700', color: '#0F172A', fontSize: '13px' }}>
-                                  {p.dealer_price ? Number(p.dealer_price).toLocaleString() : 0} 원
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* 업체별 개별 특가 표시 (이미지 1의 방식 적용) */}
-                            {parsedCompanyPrices.length > 0 && (
-                              <div style={{ borderTop: '1px dashed #E2E8F0', paddingTop: '6px', marginTop: '6px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#D97706', display: 'block', marginBottom: '4px' }}>업체별 특가</span>
-                                {parsedCompanyPrices.map((cp, cIdx) => (
-                                  <div key={cIdx} style={{ fontSize: '12px', color: '#D97706', fontWeight: '600' }}>
-                                    • {cp.company_name}: {Number(cp.price).toLocaleString()}원
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {p.note && (
-                            <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '12px' }}>
-                              📝 {p.note}
-                            </div>
-                          )}
-
-                         
+                    return (
+                      <div 
+                        key={h.id} 
+                        onClick={() => comp && handleSelectCompany(comp)}
+                        style={{ 
+                          padding: '14px', 
+                          borderRadius: '14px', 
+                          backgroundColor: 'white', 
+                          border: '1px solid #E2E8F0',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                          cursor: comp ? 'pointer' : 'default'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid #F1F5F9' }}>
+                          <span style={{ fontSize: '14px', fontWeight: '700', color: '#2563EB' }}>
+                            🏢 {comp ? comp.name : '미지정 업체'}
+                          </span>
+                          <span style={{ fontSize: '12px', color: '#64748B' }}>
+                            {h.work_date}
+                          </span>
                         </div>
-                      )
-                    })
-                  )}
-                </div>
-              </>
-            )}
 
+                        <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#334155' }}>
+                          <b>S/N:</b> <span style={{ color: '#0284C7', fontWeight: '600' }}>{h.sn || '없음'}</span>
+                        </p>
+                        <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#334155' }}>
+                          <b>작업내용:</b> {h.work_content || '-'}
+                        </p>
+                        <p style={{ margin: 0, fontSize: '13px', color: '#334155' }}>
+                          <b>교체 파트:</b> {parsedParts.length > 0 ? parsedParts.join(', ') : '없음'}
+                        </p>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            ) : (
+              /* B. 업체 목록 출력 */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {filteredCompanies.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '30px', color: '#94A3B8', backgroundColor: 'white', borderRadius: '16px' }}>
+                    등록된 업체가 없습니다.
+                  </div>
+                ) : (
+                  filteredCompanies.map((c) => {
+                    const mList = parseManagers(c.manager, c.phone, c.email)
+                    const displayManager = mList.map(m => m.name ? `${m.name}${m.role ? `(${m.role})` : ''}` : '').filter(Boolean).join(', ') || '미등록'
+
+                    return (
+                      <div 
+                        key={c.id} 
+                        onClick={() => handleSelectCompany(c)}
+                        style={{ 
+                          padding: '16px', 
+                          borderRadius: '16px', 
+                          background: 'white',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justify: 'space-between',
+                          border: '1px solid #F1F5F9'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>🏢</div>
+                          <div style={{ overflow: 'hidden' }}>
+                            <h4 style={{ margin: '0 0 4px 0', color: '#1E293B', fontSize: '15px', fontWeight: '700' }}>{c.name}</h4>
+                            <span style={{ fontSize: '12px', color: '#64748B', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              👤 담당자: <strong style={{ color: '#334155', fontWeight: '600' }}>{displayManager}</strong>
+                            </span>
+                          </div>
+                        </div>
+                        <span style={{ color: '#CBD5E1', fontSize: '16px', marginLeft: '8px' }}>›</span>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1074,6 +705,7 @@ function App() {
                     <span style={{ fontWeight: '500', color: '#1E293B', textAlign: 'right', maxWidth: '60%' }}>{selectedCompany.address || '-'}</span>
                   </div>
 
+                  {/* 주소 바로 아래 비고 영역 */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                     <span style={{ color: '#64748B', fontSize: '13px', fontWeight: '600' }}>📌 비고</span>
                     <div style={{ backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid #F1F5F9', color: '#334155', whiteSpace: 'pre-wrap', minHeight: '38px', fontSize: '13px' }}>
@@ -1164,6 +796,7 @@ function App() {
             )}
           </div>
 
+          {/* 최근 서비스 이력 목록 */}
           <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
               <h4 style={{ margin: 0, color: '#1E293B', fontSize: '15px' }}>
@@ -1207,7 +840,9 @@ function App() {
                       const temp = typeof h.parts === 'string' ? JSON.parse(h.parts) : h.parts
                       parsedParts = Array.isArray(temp) ? temp.filter(p => p && p.trim() !== '') : []
                     }
-                  } catch (e) {}
+                  } catch (e) {
+                    parsedParts = []
+                  }
 
                   return (
                     <div key={h.id} style={{ border: '1px solid #F1F5F9', padding: '12px', borderRadius: '8px', backgroundColor: '#F8FAFC' }}>
@@ -1312,15 +947,15 @@ function App() {
               <div>
                 <label style={labelStyle}>🔧 사용 부품 (최대 2개)</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                  {usedParts.map((p, idx) => (
+                  {parts.map((p, idx) => (
                     <input 
                       key={idx} 
                       placeholder={`부품 ${idx + 1}`}
                       value={p} 
                       onChange={(e) => {
-                        const newParts = [...usedParts]
+                        const newParts = [...parts]
                         newParts[idx] = e.target.value
-                        setUsedParts(newParts)
+                        setParts(newParts)
                       }} 
                       style={inputStyle}
                     />

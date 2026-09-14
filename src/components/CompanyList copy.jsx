@@ -1,7 +1,6 @@
 import React from 'react'
 
 export default function CompanyList({
-  onOpenPartModal, // 🟢 부품 등록 모달 열기 함수 추가
   companySearchTerm,
   setCompanySearchTerm,
   snPartSearchTerm,
@@ -107,29 +106,32 @@ export default function CompanyList({
       <div style={{ padding: '0 16px', marginTop: '16px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
           
-          {/* 🟢 [수정된 왼쪽 카드] 부품 등록하기 버튼 */}
+          {/* 최근 등록 업체 카드 */}
           <div 
-            onClick={onOpenPartModal}
+            onClick={() => {
+              setShowRecentOnly(!showRecentOnly)
+              if (showAddForm) setShowAddForm(false)
+            }}
             style={{ 
               backgroundColor: 'white', 
               borderRadius: '16px', 
               padding: '16px', 
               boxShadow: '0 2px 8px rgba(0,0,0,0.04)', 
               cursor: 'pointer',
-              border: '2px solid transparent',
+              border: showRecentOnly ? '2px solid #2563EB' : '2px solid transparent',
               transition: 'all 0.2s ease'
             }}
           >
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>🔧</div>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: showRecentOnly ? '#2563EB' : '#EFF6FF', color: showRecentOnly ? 'white' : '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>🆕</div>
             <div>
-              <span style={{ fontSize: '13px', color: '#1E293B', fontWeight: '700', display: 'block' }}>부품 등록하기</span>
-              <span style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px', display: 'block' }}>
-                새로운 부품을 등록합니다
+              <span style={{ fontSize: '13px', color: '#1E293B', fontWeight: '700', display: 'block' }}>최근 등록 업체</span>
+              <span style={{ fontSize: '11px', color: showRecentOnly ? '#2563EB' : '#94A3B8', marginTop: '2px', display: 'block', fontWeight: showRecentOnly ? '600' : 'normal' }}>
+                {showRecentOnly ? '✓ 상위 5개 보는 중' : '최근 5개 업체 보기'}
               </span>
             </div>
           </div>
 
-          {/* [오른쪽 카드] 업체 등록하기 */}
+          {/* 업체 등록하기 카드 */}
           <div 
             onClick={() => {
               setShowAddForm(!showAddForm)

@@ -26,9 +26,6 @@ function App() {
   const [customerPrice, setCustomerPrice] = useState(0)
   const [stock, setStock] = useState(0)
   const [partNote, setPartNote] = useState('')
-  
-  // 업체별 특가 단가 상태 [{ company_name: '', price: 0 }]
-  const [companyPrices, setCompanyPrices] = useState([])
 
   // 메인 검색 및 필터 상태 (업체용)
   const [companySearchTerm, setCompanySearchTerm] = useState('')
@@ -110,26 +107,10 @@ function App() {
     if (!error) setPartsList(data || [])
   }
 
-  // 업체별 특가 입력 필드 관련 핸들러
-  const handleAddCompanyPriceField = () => {
-    setCompanyPrices([...companyPrices, { company_name: '', price: 0 }])
-  }
-
-  const handleRemoveCompanyPriceField = (index) => {
-    setCompanyPrices(companyPrices.filter((_, i) => i !== index))
-  }
-
-  const handleCompanyPriceChange = (index, field, value) => {
-    const updated = [...companyPrices]
-    updated[index][field] = value
-    setCompanyPrices(updated)
-  }
-
   // 부품 등록
   const handleAddPart = async (e) => {
     e.preventDefault()
     if (!partName.trim()) return alert('부품명을 입력해주세요!')
-    if (!partCode.trim()) return alert('부품 코드/품번을 입력해주세요!')
 
     setUploading(true)
     const { error } = await supabase.from('parts').insert([{
@@ -139,7 +120,6 @@ function App() {
       dealer_price: Number(dealerPrice),
       customer_price: Number(customerPrice),
       stock: Number(stock),
-      company_prices: JSON.stringify(companyPrices), // 업체별 특가 데이터
       note: partNote
     }])
 
@@ -151,7 +131,6 @@ function App() {
       alert('신규 부품이 등록되었습니다.')
       setPartName(''); setPartCode(''); setPartCategory('일반부품');
       setDealerPrice(0); setCustomerPrice(0); setStock(0); setPartNote('');
-      setCompanyPrices([])
       setShowAddPartForm(false)
       fetchParts()
     }
@@ -333,7 +312,7 @@ function App() {
   const handleDeleteCompany = async (id) => {
     if (!window.confirm('해당 업체의 모든 서비스 이력과 정보가 삭제됩니다. 정말 삭제하시겠습니까?')) return
     
-    await supabase.from('service_history').delete().eq('id', id)
+    await supabase.from('service_history').delete().eq('company_id', id)
     const { error } = await supabase.from('companies').delete().eq('id', id)
     
     if (!error) {
@@ -479,7 +458,7 @@ function App() {
             </h1>
             <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>안녕하세요, 오늘도 좋은 하루 되세요.</p>
 
-            {/* 메인 탭 */}
+            {/* 업체 vs 부품 전환 메인 탭 */}
             <div style={{ display: 'flex', gap: '8px', marginTop: '16px', backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px', borderRadius: '12px' }}>
               <button
                 onClick={() => setMainTab('companies')}
@@ -515,7 +494,7 @@ function App() {
               </button>
             </div>
 
-            {/* 검색창 */}
+            {/* 검색창 영역 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
               {mainTab === 'companies' ? (
                 <>
@@ -573,7 +552,7 @@ function App() {
 
           <div style={{ padding: '0 16px', marginTop: '16px' }}>
             
-            {/* 상단 버튼 라인 */}
+            {/* 카드리스트 버튼 상단 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
               <div 
                 onClick={() => {
@@ -617,29 +596,22 @@ function App() {
               </div>
             </div>
 
-            {/* 신규 부품 등록 폼 (요청 항목 순서대로 구성) */}
+            {/* 신규 부품 등록 폼 */}
             {mainTab === 'parts' && showAddPartForm && (
               <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '20px' }}>
-                <h4 style={{ margin: '0 0 14px 0', fontSize: '16px', color: '#1E293B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>🔧 신규 부품 등록</span>
-                  <button type="button" onClick={() => setShowAddPartForm(false)} style={{ border: 'none', background: 'none', color: '#94A3B8', fontSize: '16px', cursor: 'pointer' }}>✕</button>
-                </h4>
-                
-                <form onSubmit={handleAddPart} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  
-                  {/* 1. 부품 코드/품번, 부품명 */}
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#1E293B' }}>🔧 신규 부품 등록</h4>
+                <form onSubmit={handleAddPart} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <div>
-                      <label style={labelStyle}>부품 코드/품번 *</label>
-                      <input placeholder="예: INK-001" value={partCode} onChange={(e) => setPartCode(e.target.value)} style={inputStyle} required />
+                      <label style={labelStyle}>부품명*</label>
+                      <input placeholder="예: 메인 필터" value={partName} onChange={(e) => setPartName(e.target.value)} style={inputStyle} />
                     </div>
                     <div>
-                      <label style={labelStyle}>부품명 *</label>
-                      <input placeholder="예: 잉크 (Black)" value={partName} onChange={(e) => setPartName(e.target.value)} style={inputStyle} required />
+                      <label style={labelStyle}>부품 코드/품번</label>
+                      <input placeholder="예: P-1002" value={partCode} onChange={(e) => setPartCode(e.target.value)} style={inputStyle} />
                     </div>
                   </div>
 
-                  {/* 2. 카테고리 & 초기 재고 수량 */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <div>
                       <label style={labelStyle}>카테고리</label>
@@ -656,77 +628,25 @@ function App() {
                     </div>
                   </div>
 
-                  {/* 3. 가격 정보 (소비자 기본가, 딜러 기본가) */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <div>
-                      <label style={labelStyle}>소비자 기본가격 (원)</label>
-                      <input type="number" placeholder="0" value={customerPrice} onChange={(e) => setCustomerPrice(e.target.value)} style={inputStyle} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>딜러 기본가격 (원)</label>
+                      <label style={labelStyle}>🟢 업체별 단가 (입고/매입가)</label>
                       <input type="number" placeholder="0" value={dealerPrice} onChange={(e) => setDealerPrice(e.target.value)} style={inputStyle} />
                     </div>
-                  </div>
-
-                  {/* 4. 업체별 개별 단가 (선택) */}
-                  <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <div>
-                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#1E293B' }}>업체별 개별 단가 (선택)</span>
-                        <span style={{ fontSize: '11px', color: '#94A3B8', display: 'block' }}>특정 거래처의 공급가를 지정합니다.</span>
-                      </div>
-                      <button 
-                        type="button" 
-                        onClick={handleAddCompanyPriceField}
-                        style={{ border: 'none', background: '#EFF6FF', color: '#2563EB', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                      >
-                        + 업체 추가
-                      </button>
+                    <div>
+                      <label style={labelStyle}>🟢 소비자/기본 단가 (출고가)</label>
+                      <input type="number" placeholder="0" value={customerPrice} onChange={(e) => setCustomerPrice(e.target.value)} style={inputStyle} />
                     </div>
-
-                    {companyPrices.map((cp, idx) => (
-                      <div key={idx} style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '8px', backgroundColor: '#F8FAFC', padding: '8px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                        {/* 등록된 업체 선택 드롭다운 */}
-                        <select 
-                          value={cp.company_name} 
-                          onChange={(e) => handleCompanyPriceChange(idx, 'company_name', e.target.value)}
-                          style={{ ...inputStyle, flex: 1.2 }}
-                        >
-                          <option value="">업체 선택</option>
-                          {companies.map(c => (
-                            <option key={c.id} value={c.name}>{c.name}</option>
-                          ))}
-                        </select>
-                        <input 
-                          type="number" 
-                          placeholder="특가 (원)" 
-                          value={cp.price} 
-                          onChange={(e) => handleCompanyPriceChange(idx, 'price', e.target.value)}
-                          style={{ ...inputStyle, flex: 1 }}
-                        />
-                        <button 
-                          type="button" 
-                          onClick={() => handleRemoveCompanyPriceField(idx)} 
-                          style={{ border: 'none', background: 'none', color: '#EF4444', fontSize: '14px', cursor: 'pointer', padding: '4px 8px' }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
                   </div>
 
-                  {/* 5. 비고 */}
                   <div>
-                    <label style={labelStyle}>📌 비고</label>
-                    <textarea rows="2" placeholder="메모 및 특이사항 입력" value={partNote} onChange={(e) => setPartNote(e.target.value)} style={inputStyle} />
+                    <label style={labelStyle}>📌 비고 / 호환 규격</label>
+                    <textarea rows="2" placeholder="호환 기종 등 메모" value={partNote} onChange={(e) => setPartNote(e.target.value)} style={inputStyle} />
                   </div>
 
-                  {/* 6. 하단 버튼 영역 */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '6px' }}>
-                    <button type="button" onClick={() => setShowAddPartForm(false)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #CBD5E1', background: 'white', color: '#64748B', fontWeight: '600', cursor: 'pointer' }}>
-                      취소
-                    </button>
-                    <button type="submit" disabled={uploading} style={{ padding: '12px', background: '#2563EB', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <button type="button" onClick={() => setShowAddPartForm(false)} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', background: 'white', color: '#64748B', fontWeight: '600', cursor: 'pointer' }}>취소</button>
+                    <button type="submit" disabled={uploading} style={{ padding: '10px', background: '#2563EB', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>
                       {uploading ? '저장 중...' : '부품 등록'}
                     </button>
                   </div>
@@ -932,82 +852,78 @@ function App() {
                       등록된 부품이 없습니다.
                     </div>
                   ) : (
-                    filteredParts.map((p) => {
-                      let parsedCompanyPrices = []
-                      try {
-                        if (p.company_prices) {
-                          const temp = typeof p.company_prices === 'string' ? JSON.parse(p.company_prices) : p.company_prices
-                          parsedCompanyPrices = Array.isArray(temp) ? temp : []
-                        }
-                      } catch (e) {}
+                    filteredParts.map((p) => (
+                      <div 
+                        key={p.id}
+                        style={{
+                          backgroundColor: 'white',
+                          borderRadius: '16px',
+                          padding: '16px',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                          border: '1px solid #E2E8F0'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                          <div>
+                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#2563EB', marginRight: '6px' }}>
+                              {p.category || '일반부품'}
+                            </span>
+                            {p.code && <span style={{ fontSize: '12px', color: '#94A3B8' }}>#{p.code}</span>}
+                            <h4 style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: '700', color: '#1E293B' }}>{p.name}</h4>
+                          </div>
+                          <button 
+                            onClick={() => handleDeletePart(p.id)}
+                            style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', fontSize: '14px', padding: 0 }}
+                          >
+                            🗑️
+                          </button>
+                        </div>
 
-                      return (
-                        <div 
-                          key={p.id}
-                          style={{
-                            backgroundColor: 'white',
-                            borderRadius: '16px',
-                            padding: '16px',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                            border: '1px solid #E2E8F0'
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                            <div>
-                              <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#2563EB', marginRight: '6px' }}>
-                                {p.category || '일반부품'}
-                              </span>
-                              {p.code && <span style={{ fontSize: '12px', color: '#94A3B8' }}>#{p.code}</span>}
-                              <h4 style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: '700', color: '#1E293B' }}>{p.name}</h4>
-                            </div>
+                        {/* 단가 정보 영역 */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', backgroundColor: '#F8FAFC', padding: '10px', borderRadius: '10px', fontSize: '12px', marginBottom: '12px' }}>
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block' }}>업체 단가 (입고가)</span>
+                            <span style={{ fontWeight: '700', color: '#0F172A', fontSize: '13px' }}>
+                              {p.dealer_price ? Number(p.dealer_price).toLocaleString() : 0} 원
+                            </span>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block' }}>소비자 단가 (출고가)</span>
+                            <span style={{ fontWeight: '700', color: '#2563EB', fontSize: '13px' }}>
+                              {p.customer_price ? Number(p.customer_price).toLocaleString() : 0} 원
+                            </span>
+                          </div>
+                        </div>
+
+                        {p.note && (
+                          <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '12px' }}>
+                            📝 {p.note}
+                          </div>
+                        )}
+
+                        {/* 남은 수량 (재고) 컨트롤러 */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>남은 수량(재고)</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <button 
-                              onClick={() => handleDeletePart(p.id)}
-                              style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', fontSize: '14px', padding: 0 }}
+                              onClick={() => handleUpdateStock(p.id, p.stock || 0, -1)}
+                              style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #CBD5E1', background: 'white', color: '#1E293B', fontWeight: '700', cursor: 'pointer' }}
                             >
-                              🗑️
+                              -
+                            </button>
+                            <span style={{ fontSize: '15px', fontWeight: '800', minWidth: '30px', textAlign: 'center', color: (p.stock || 0) <= 0 ? '#EF4444' : '#1E293B' }}>
+                              {p.stock || 0}
+                            </span>
+                            <button 
+                              onClick={() => handleUpdateStock(p.id, p.stock || 0, 1)}
+                              style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #CBD5E1', background: 'white', color: '#1E293B', fontWeight: '700', cursor: 'pointer' }}
+                            >
+                              +
                             </button>
                           </div>
-
-                          {/* 단가 정보 영역 */}
-                          <div style={{ backgroundColor: '#F8FAFC', padding: '10px', borderRadius: '10px', fontSize: '12px', marginBottom: '12px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: parsedCompanyPrices.length > 0 ? '8px' : '0' }}>
-                              <div>
-                                <span style={{ color: '#64748B', display: 'block' }}>소비자 기본가</span>
-                                <span style={{ fontWeight: '700', color: '#2563EB', fontSize: '13px' }}>
-                                  {p.customer_price ? Number(p.customer_price).toLocaleString() : 0} 원
-                                </span>
-                              </div>
-                              <div>
-                                <span style={{ color: '#64748B', display: 'block' }}>딜러 기본가</span>
-                                <span style={{ fontWeight: '700', color: '#0F172A', fontSize: '13px' }}>
-                                  {p.dealer_price ? Number(p.dealer_price).toLocaleString() : 0} 원
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* 업체별 개별 특가 표시 (이미지 1의 방식 적용) */}
-                            {parsedCompanyPrices.length > 0 && (
-                              <div style={{ borderTop: '1px dashed #E2E8F0', paddingTop: '6px', marginTop: '6px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#D97706', display: 'block', marginBottom: '4px' }}>업체별 특가</span>
-                                {parsedCompanyPrices.map((cp, cIdx) => (
-                                  <div key={cIdx} style={{ fontSize: '12px', color: '#D97706', fontWeight: '600' }}>
-                                    • {cp.company_name}: {Number(cp.price).toLocaleString()}원
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {p.note && (
-                            <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '12px' }}>
-                              📝 {p.note}
-                            </div>
-                          )}
-
-                         
                         </div>
-                      )
-                    })
+                      </div>
+                    ))
                   )}
                 </div>
               </>
