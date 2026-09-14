@@ -697,11 +697,11 @@ function App() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <div>
                       <label style={labelStyle}>부품 코드/품번 *</label>
-                      <input placeholder="예: INK-001" value={partCode} onChange={(e) => setPartCode(e.target.value)} style={inputStyle} required />
+                      <input placeholder="예: E55-0000000" value={partCode} onChange={(e) => setPartCode(e.target.value)} style={inputStyle} required />
                     </div>
                     <div>
                       <label style={labelStyle}>부품명 *</label>
-                      <input placeholder="예: 잉크 (Black)" value={partName} onChange={(e) => setPartName(e.target.value)} style={inputStyle} required />
+                      <input placeholder="예: Intermediate service KIT" value={partName} onChange={(e) => setPartName(e.target.value)} style={inputStyle} required />
                     </div>
                   </div>
 
@@ -711,7 +711,7 @@ function App() {
                       <select value={partCategory} onChange={(e) => setPartCategory(e.target.value)} style={inputStyle}>
                         <option value="일반부품">일반부품</option>
                         <option value="소모품">소모품</option>
-                        <option value="필터류">필터류</option>
+                        <option value="필터류">Overhaul</option>
                         <option value="기타">기타</option>
                       </select>
                     </div>
