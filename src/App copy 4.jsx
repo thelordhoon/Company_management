@@ -30,7 +30,7 @@ function App() {
   // 업체별 특가 단가 상태 [{ company_name: '', price: 0 }]
   const [companyPrices, setCompanyPrices] = useState([])
 
-  // 부품 수정 모드 관련 상태
+  // 부품 수정 모드 관련 상태 (업체별 특가 수정 상태 포함)
   const [editingPartId, setEditingPartId] = useState(null)
   const [editPartForm, setEditPartForm] = useState({
     name: '',
@@ -123,52 +123,7 @@ function App() {
     if (!error) setPartsList(data || [])
   }
 
-  // ★ 업체 상세 페이지용: 품번/부품명 및 업체명으로 부품 가격 연동 계산 함수 ★
-  const getPartPriceInfo = (itemCodeOrName, companyName) => {
-    if (!itemCodeOrName || !itemCodeOrName.trim()) return null;
-
-    const query = itemCodeOrName.trim().toLowerCase();
-    
-    // 1. 부품 목록에서 품번(code) 또는 부품명(name)으로 해당 부품 찾기
-    const matchedPart = partsList.find(p => 
-      (p.code && p.code.trim().toLowerCase() === query) ||
-      (p.name && p.name.trim().toLowerCase() === query)
-    );
-
-    if (!matchedPart) return { found: false };
-
-    // 2. 부품 내 업체별 특별가 목록에서 현재 업체명 찾기
-    let companySpecialPrice = null;
-    try {
-      if (matchedPart.company_prices) {
-        const cpList = typeof matchedPart.company_prices === 'string' 
-          ? JSON.parse(matchedPart.company_prices) 
-          : matchedPart.company_prices;
-
-        if (Array.isArray(cpList)) {
-          const matchedCp = cpList.find(cp => 
-            cp.company_name && cp.company_name.trim().toLowerCase() === companyName.trim().toLowerCase()
-          );
-          if (matchedCp && matchedCp.price) {
-            companySpecialPrice = Number(matchedCp.price);
-          }
-        }
-      }
-    } catch (e) {}
-
-    return {
-      found: true,
-      partName: matchedPart.name,
-      partCode: matchedPart.code,
-      customerPrice: matchedPart.customer_price || 0,
-      specialPrice: companySpecialPrice,
-      // 특별가가 지정되어 있으면 특별가를 사용, 없으면 소비자 기본가 사용
-      finalPrice: companySpecialPrice !== null ? companySpecialPrice : (matchedPart.customer_price || 0),
-      isSpecial: companySpecialPrice !== null
-    };
-  }
-
-  // 업체별 특가 입력 필드 핸들러 (등록용)
+  // 업체별 특가 입력 필드 관련 핸들러 (등록용)
   const handleAddCompanyPriceField = () => {
     setCompanyPrices([...companyPrices, { company_name: '', price: 0 }])
   }
@@ -183,7 +138,7 @@ function App() {
     setCompanyPrices(updated)
   }
 
-  // 업체별 특가 입력 필드 핸들러 (수정용)
+  // 업체별 특가 입력 필드 관련 핸들러 (수정용)
   const handleAddEditCompanyPriceField = () => {
     setEditCompanyPrices([...editCompanyPrices, { company_name: '', price: 0 }])
   }
@@ -230,7 +185,7 @@ function App() {
     }
   }
 
-  // 부품 수정 모드 시작
+  // 부품 수정 모드 시작 핸들러
   const handleStartEditPart = (p) => {
     setEditingPartId(p.id)
     setEditPartForm({
@@ -255,7 +210,7 @@ function App() {
     }
   }
 
-  // 부품 수정 저장
+  // 부품 수정 저장 핸들러
   const handleSavePartEdit = async (partId) => {
     setUploading(true)
     const { error } = await supabase
@@ -777,7 +732,7 @@ function App() {
                     </div>
                   </div>
 
-                  {/* 등록용 업체별 특가 */}
+                  {/* 등록용 업체별 특가 (검색형 자동완성 적용) */}
                   <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <div>
@@ -812,6 +767,7 @@ function App() {
                             {cp.company_name && (
                               <span onClick={() => handleCompanyPriceChange(idx, 'company_name', '')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#94A3B8', fontSize: '12px' }}>✕</span>
                             )}
+                            {/* 검색 결과 리스트 드롭다운 */}
                             {searchKeyword.trim() !== '' && !companies.some(c => c.name === searchKeyword) && matchedCompanies.length > 0 && (
                               <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', backgroundColor: 'white', border: '1px solid #CBD5E1', borderRadius: '8px', maxHeight: '150px', overflowY: 'auto', zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginTop: '2px' }}>
                                 {matchedCompanies.map(c => (
@@ -1076,7 +1032,7 @@ function App() {
                             borderRadius: '16px',
                             padding: '16px',
                             boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                            border: '1px solid #E2E8F0'
+                            border: hasSpecialPrice ? '1px solid #FCD34D' : '1px solid #E2E8F0'
                           }}
                         >
                           {!isEditingThis ? (
@@ -1088,6 +1044,12 @@ function App() {
                                     <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#2563EB' }}>
                                       {p.category || '일반부품'}
                                     </span>
+                                    {/* ★ 잉크 희석제 특별가 표시기능 (태그 배지) ★ */}
+                                    {hasSpecialPrice && (
+                                      <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' }}>
+                                        ⭐ {parsedCompanyPrices.length}개 업체 특별가
+                                      </span>
+                                    )}
                                   </div>
                                   {p.code && <span style={{ fontSize: '12px', color: '#94A3B8' }}>#{p.code}</span>}
                                   <h4 style={{ margin: '2px 0 0 0', fontSize: '16px', fontWeight: '700', color: '#1E293B' }}>{p.name}</h4>
@@ -1110,7 +1072,7 @@ function App() {
 
                               {/* 단가 및 재고 정보 영역 */}
                               <div style={{ backgroundColor: '#F8FAFC', padding: '10px', borderRadius: '10px', fontSize: '12px', marginBottom: '12px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: hasSpecialPrice ? '8px' : '0' }}>
                                   <div>
                                     <span style={{ color: '#64748B', display: 'block' }}>재고수량</span>
                                     <span style={{ fontWeight: '700', color: '#10B981', fontSize: '13px' }}>
@@ -1131,16 +1093,16 @@ function App() {
                                   </div>
                                 </div>
 
-                                {/* 지정 업체별 특가 목록 */}
+                                {/* ★ 잉크 희석제 특별가 리스트 영역 강조 ★ */}
                                 {hasSpecialPrice && (
-                                  <div style={{ borderTop: '1px dashed #CBD5E1', paddingTop: '6px', marginTop: '8px' }}>
+                                  <div style={{ borderTop: '1px dashed #FCD34D', paddingTop: '6px', marginTop: '6px', backgroundColor: '#FFFBEB', margin: '6px -10px -10px -10px', padding: '8px 10px', borderBottomLeftRadius: '10px', borderBottomRightRadius: '10px' }}>
                                     <span style={{ fontSize: '11px', fontWeight: '700', color: '#D97706', display: 'block', marginBottom: '4px' }}>
-                                      🏷️ 지정 업체 특별가 목록
+                                      🏷️ 지정 업체 특별가 적용
                                     </span>
                                     {parsedCompanyPrices.map((cp, cIdx) => (
-                                      <div key={cIdx} style={{ fontSize: '12px', color: '#475569', fontWeight: '600', display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
+                                      <div key={cIdx} style={{ fontSize: '12px', color: '#B45309', fontWeight: '600', display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
                                         <span>• {cp.company_name}</span>
-                                        <span style={{ color: '#D97706' }}>{Number(cp.price).toLocaleString()}원</span>
+                                        <span>{Number(cp.price).toLocaleString()}원</span>
                                       </div>
                                     ))}
                                   </div>
@@ -1223,7 +1185,7 @@ function App() {
                                   </div>
                                 </div>
 
-                                {/* 수정 모드 내 업체별 특가 편집 */}
+                                {/* 수정 모드 내 업체별 특가 편집 (검색형 자동완성 적용) */}
                                 <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '8px' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                                     <span style={{ fontSize: '12px', fontWeight: '700', color: '#1E293B' }}>업체별 특가 관리</span>
@@ -1255,6 +1217,7 @@ function App() {
                                           {cp.company_name && (
                                             <span onClick={() => handleEditCompanyPriceChange(idx, 'company_name', '')} style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#94A3B8', fontSize: '11px' }}>✕</span>
                                           )}
+                                          {/* 검색 결과 리스트 드롭다운 */}
                                           {searchKeyword.trim() !== '' && !companies.some(c => c.name === searchKeyword) && matchedCompanies.length > 0 && (
                                             <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', backgroundColor: 'white', border: '1px solid #CBD5E1', borderRadius: '8px', maxHeight: '140px', overflowY: 'auto', zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginTop: '2px' }}>
                                               {matchedCompanies.map(c => (
@@ -1395,72 +1358,16 @@ function App() {
                     </div>
                   </div>
 
-                  {/* ★ 잉크 및 희석제 - 부품 목록 연동 단가 표시 영역 ★ */}
-                  {(() => {
-                    const inkInfo = getPartPriceInfo(selectedCompany.ink, selectedCompany.name);
-                    const solventInfo = getPartPriceInfo(selectedCompany.solvent, selectedCompany.name);
-
-                    return (
-                      <div style={{ backgroundColor: '#EFF6FF', padding: '14px', borderRadius: '12px', marginTop: '6px', border: '1px solid #DBEAFE' }}>
-                        
-                        {/* 잉크 정보 & 연동 단가 */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <div>
-                            <span style={{ color: '#1E40AF', fontWeight: '600', fontSize: '13px', display: 'block' }}>🧪 잉크 품번</span>
-                            <span style={{ fontWeight: '700', color: '#1E3A8A', fontSize: '14px' }}>{selectedCompany.ink || '미등록'}</span>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            {inkInfo && inkInfo.found ? (
-                              <div>
-                                {inkInfo.isSpecial ? (
-                                  <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FCD34D', display: 'inline-block', marginBottom: '2px' }}>
-                                    ⭐ 업체 특별가
-                                  </span>
-                                ) : (
-                                  <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginBottom: '2px' }}>기본가</span>
-                                )}
-                                <div style={{ fontWeight: '800', color: inkInfo.isSpecial ? '#D97706' : '#2563EB', fontSize: '15px' }}>
-                                  {inkInfo.finalPrice.toLocaleString()} 원
-                                </div>
-                              </div>
-                            ) : (
-                              selectedCompany.ink && <span style={{ fontSize: '11px', color: '#94A3B8' }}>부품 미등록</span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div style={{ height: '1px', backgroundColor: '#BFDBFE', margin: '8px 0' }}></div>
-
-                        {/* 희석제 정보 & 연동 단가 */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <span style={{ color: '#1E40AF', fontWeight: '600', fontSize: '13px', display: 'block' }}>💧 희석제 품번</span>
-                            <span style={{ fontWeight: '700', color: '#1E3A8A', fontSize: '14px' }}>{selectedCompany.solvent || '미등록'}</span>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            {solventInfo && solventInfo.found ? (
-                              <div>
-                                {solventInfo.isSpecial ? (
-                                  <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FCD34D', display: 'inline-block', marginBottom: '2px' }}>
-                                    ⭐ 업체 특별가
-                                  </span>
-                                ) : (
-                                  <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginBottom: '2px' }}>기본가</span>
-                                )}
-                                <div style={{ fontWeight: '800', color: solventInfo.isSpecial ? '#D97706' : '#2563EB', fontSize: '15px' }}>
-                                  {solventInfo.finalPrice.toLocaleString()} 원
-                                </div>
-                              </div>
-                            ) : (
-                              selectedCompany.solvent && <span style={{ fontSize: '11px', color: '#94A3B8' }}>부품 미등록</span>
-                            )}
-                          </div>
-                        </div>
-
-                      </div>
-                    )
-                  })()}
-
+                  <div style={{ backgroundColor: '#EFF6FF', padding: '12px', borderRadius: '10px', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ color: '#1E40AF', fontWeight: '600' }}>🧪 잉크:</span>
+                      <span style={{ fontWeight: '700', color: '#1E3A8A' }}>{selectedCompany.ink || '미등록'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#1E40AF', fontWeight: '600' }}>💧 희석제:</span>
+                      <span style={{ fontWeight: '700', color: '#1E3A8A' }}>{selectedCompany.solvent || '미등록'}</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '20px' }}>
