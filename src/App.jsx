@@ -1414,7 +1414,7 @@ function App() {
                               <div>
                                 {inkInfo.isSpecial ? (
                                   <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FCD34D', display: 'inline-block', marginBottom: '2px' }}>
-                                    ⭐ 업체 특별가
+                                     업체 특별가
                                   </span>
                                 ) : (
                                   <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginBottom: '2px' }}>기본가</span>
@@ -1442,7 +1442,7 @@ function App() {
                               <div>
                                 {solventInfo.isSpecial ? (
                                   <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FCD34D', display: 'inline-block', marginBottom: '2px' }}>
-                                    ⭐ 업체 특별가
+                                     업체 특별가
                                   </span>
                                 ) : (
                                   <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginBottom: '2px' }}>기본가</span>
