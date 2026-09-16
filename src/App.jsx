@@ -1680,7 +1680,6 @@ function App() {
 
               
     <div>
-    <label style={labelStyle}>📅 작업일자</label>
     <input 
     type="date" 
     value={workDate} 
