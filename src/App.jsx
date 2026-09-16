@@ -1709,10 +1709,19 @@ function App() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={labelStyle}>🏷️ 장비 모델명</label>
-                  <input value={modelName} onChange={(e) => setModelName(e.target.value)} style={inputStyle} placeholder="예: JET2Neo" />
-                </div>
+              <div>
+  <label style={labelStyle}>🏷️ 장비 모델명</label>
+  <select 
+    value={modelName} 
+    onChange={(e) => setModelName(e.target.value)} 
+    style={inputStyle}
+  >
+    <option value="JET1Neo">JET1Neo</option>
+    <option value="JET2Neo">JET2Neo</option>
+    <option value="JET3">JET3</option>
+    <option value="JET3up">JET3up</option>
+  </select>
+</div>
                 <div>
                   <label style={labelStyle}>🔢 S/N (시리얼번호)</label>
                   <input value={sn} onChange={(e) => setSn(e.target.value)} style={inputStyle} placeholder="시리얼번호" />
