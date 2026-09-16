@@ -1679,8 +1679,7 @@ function App() {
               </div>
 
               <div>
-                <label style={labelStyle}>📅 작업일자</label>
-                <input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} style={inputStyle} />
+                 <input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} style={inputStyle} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
