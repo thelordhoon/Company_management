@@ -1770,7 +1770,7 @@ function App() {
                   <button type="button" onClick={clearSignature} style={{ border: 'none', background: '#F1F5F9', color: '#64748B', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>서명 초기화</button>
                 </div>
                 <div style={{ border: '1px solid #CBD5E1', borderRadius: '8px', backgroundColor: '#FFFFFF', overflow: 'hidden' }}>
-                  <SignatureCanvas ref={sigCanvas} canvasProps={{ width: 440, height: 150, className: 'sigCanvas' }} />
+                  <SignatureCanvas ref={sigCanvas} canvasProps={{ width: 440, height: 130, className: 'sigCanvas' }} />
                 </div>
               </div>
 
