@@ -89,8 +89,13 @@ function App() {
   const [sn, setSn] = useState('')
   const [modelName, setModelName] = useState('JET2Neo')
   const [workContent, setWorkContent] = useState('')
-  const [usedParts, setUsedParts] = useState(['', ''])
-  const [confirmor, setConfirmor] = useState('')
+  const [selectedManager, setSelectedManager] = useState('')
+  
+  // 수동 입력을 위한 부품 상태 초기화 (name, quantity)
+  const [usedParts, setUsedParts] = useState([
+    { name: '', quantity: 1 }
+  ])
+  const [confirmor, setConfirmor] = useState('박남준')
 
   const [historyList, setHistoryList] = useState([])
   const [uploading, setUploading] = useState(false)
@@ -123,13 +128,12 @@ function App() {
     if (!error) setPartsList(data || [])
   }
 
-  // ★ 업체 상세 페이지용: 품번/부품명 및 업체명으로 부품 가격 연동 계산 함수 ★
+  // 업체 상세 페이지용: 품번/부품명 및 업체명으로 부품 가격 연동 계산 함수
   const getPartPriceInfo = (itemCodeOrName, companyName) => {
     if (!itemCodeOrName || !itemCodeOrName.trim()) return null;
 
     const query = itemCodeOrName.trim().toLowerCase();
     
-    // 1. 부품 목록에서 품번(code) 또는 부품명(name)으로 해당 부품 찾기
     const matchedPart = partsList.find(p => 
       (p.code && p.code.trim().toLowerCase() === query) ||
       (p.name && p.name.trim().toLowerCase() === query)
@@ -137,7 +141,6 @@ function App() {
 
     if (!matchedPart) return { found: false };
 
-    // 2. 부품 내 업체별 특별가 목록에서 현재 업체명 찾기
     let companySpecialPrice = null;
     try {
       if (matchedPart.company_prices) {
@@ -162,7 +165,6 @@ function App() {
       partCode: matchedPart.code,
       customerPrice: matchedPart.customer_price || 0,
       specialPrice: companySpecialPrice,
-      // 특별가가 지정되어 있으면 특별가를 사용, 없으면 소비자 기본가 사용
       finalPrice: companySpecialPrice !== null ? companySpecialPrice : (matchedPart.customer_price || 0),
       isSpecial: companySpecialPrice !== null
     };
@@ -388,7 +390,8 @@ function App() {
   const handleSelectCompany = async (company) => {
     const parsedManagers = parseManagers(company.manager, company.phone, company.email)
     setSelectedCompany({ ...company, managersList: parsedManagers })
-    setConfirmor(parsedManagers[0]?.name || '')
+    setConfirmor('박남준')
+    setSelectedManager(parsedManagers[0]?.name || '')
     setIsEditing(false)
     setDetailSnSearchTerm('')
     setEditData({
@@ -485,13 +488,38 @@ function App() {
     }
   }
 
+  // 동적 부품 수동 입력 제어 핸들러
+  const handleAddReportPart = () => {
+    setUsedParts([...usedParts, { name: '', quantity: 1 }])
+  }
+
+  const handleRemoveReportPart = (index) => {
+    if (usedParts.length === 1) {
+      alert('최소 1개의 부품 항목은 유지되어야 합니다.')
+      return
+    }
+    setUsedParts(usedParts.filter((_, i) => i !== index))
+  }
+
+  const handleReportPartChange = (index, field, value) => {
+    const updated = [...usedParts]
+    updated[index][field] = value
+    setUsedParts(updated)
+  }
+
   const handleSaveReport = async (e) => {
     e.preventDefault()
     if (!selectedCompany) return
+    if (!selectedManager) return alert('담당자를 선택해주세요.')
 
     setUploading(true)
 
     try {
+      // 입력된 부품 정보를 "부품명 (수량개)" 형태로 변환 후 문자열 배열 저장
+      const formattedParts = usedParts
+        .filter(p => p.name && p.name.trim() !== '')
+        .map(p => `${p.name.trim()} (${p.quantity}개)`)
+
       const { error } = await supabase
         .from('service_history')
         .insert([{ 
@@ -502,8 +530,8 @@ function App() {
           sn,
           model_name: modelName,
           work_content: workContent,
-          parts: JSON.stringify(usedParts),
-          confirmor
+          parts: JSON.stringify(formattedParts),
+          confirmor: `${confirmor}${selectedManager ? ` (담당자: ${selectedManager})` : ''}`
         }])
 
       if (error) {
@@ -512,7 +540,7 @@ function App() {
         alert('서비스 리포트가 성공적으로 저장되었습니다!')
         setWorkContent('')
         setSn('')
-        setUsedParts(['', ''])
+        setUsedParts([{ name: '', quantity: 1 }])
         clearSignature()
         fetchAllServiceHistories()
         handleSelectCompany(selectedCompany)
@@ -954,7 +982,7 @@ function App() {
                         try {
                           if (h.parts) {
                             const temp = typeof h.parts === 'string' ? JSON.parse(h.parts) : h.parts
-                            parsedParts = Array.isArray(temp) ? temp.filter(p => p && p.trim() !== '') : []
+                            parsedParts = Array.isArray(temp) ? temp.filter(p => p && (typeof p === 'string' ? p.trim() !== '' : true)) : []
                           }
                         } catch (e) {}
 
@@ -987,7 +1015,7 @@ function App() {
                               <b>작업내용:</b> {h.work_content || '-'}
                             </p>
                             <p style={{ margin: 0, fontSize: '13px', color: '#334155' }}>
-                              <b>교체 파트:</b> {parsedParts.length > 0 ? parsedParts.join(', ') : '없음'}
+                              <b>교체 파트:</b> {parsedParts.length > 0 ? parsedParts.map(p => typeof p === 'object' ? (p.name || p.part_id) : p).join(', ') : '없음'}
                             </p>
                           </div>
                         )
@@ -1395,7 +1423,7 @@ function App() {
                     </div>
                   </div>
 
-                  {/* ★ 잉크 및 희석제 - 부품 목록 연동 단가 표시 영역 ★ */}
+                  {/* 잉크 및 희석제 - 부품 목록 연동 단가 표시 영역 */}
                   {(() => {
                     const inkInfo = getPartPriceInfo(selectedCompany.ink, selectedCompany.name);
                     const solventInfo = getPartPriceInfo(selectedCompany.solvent, selectedCompany.name);
@@ -1569,7 +1597,7 @@ function App() {
                   try {
                     if (h.parts) {
                       const temp = typeof h.parts === 'string' ? JSON.parse(h.parts) : h.parts
-                      parsedParts = Array.isArray(temp) ? temp.filter(p => p && p.trim() !== '') : []
+                      parsedParts = Array.isArray(temp) ? temp.filter(p => p && (typeof p === 'string' ? p.trim() !== '' : true)) : []
                     }
                   } catch (e) {}
 
@@ -1594,7 +1622,7 @@ function App() {
                         <b>작업:</b> {h.work_content || '-'}
                       </p>
                       <p style={{ margin: 0, fontSize: '13px', color: '#334155' }}>
-                        <b>교체 파트:</b> {parsedParts.length > 0 ? parsedParts.join(', ') : '없음'}
+                        <b>교체 파트:</b> {parsedParts.length > 0 ? parsedParts.map(p => typeof p === 'object' ? (p.name || p.part_id) : p).join(', ') : '없음'}
                       </p>
                     </div>
                   )
@@ -1616,6 +1644,40 @@ function App() {
 
           <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <form onSubmit={handleSaveReport} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              
+              {/* 업체명 및 담당자 선택 영역 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={labelStyle}>🏢 업체명</label>
+                  <input 
+                    type="text" 
+                    value={selectedCompany.name || ''} 
+                    readOnly 
+                    style={{ ...inputStyle, backgroundColor: '#E2E8F0', color: '#64748B', fontWeight: 'bold' }} 
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>👤 담당자 선택*</label>
+                  <select 
+                    value={selectedManager} 
+                    onChange={(e) => setSelectedManager(e.target.value)} 
+                    style={inputStyle}
+                    required
+                  >
+                    <option value="">담당자 선택</option>
+                    {selectedCompany.managersList && selectedCompany.managersList.length > 0 ? (
+                      selectedCompany.managersList.map((mgr, idx) => (
+                        <option key={idx} value={mgr.name}>
+                          {mgr.name ? `${mgr.name} ${mgr.phone ? `(${mgr.phone})` : ''}` : '담당자'}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>등록된 담당자 없음</option>
+                    )}
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label style={labelStyle}>📅 작업일자</label>
                 <input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} style={inputStyle} />
@@ -1625,15 +1687,15 @@ function App() {
                 <div>
                   <label style={labelStyle}>⏰ 시작시간</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <input value={startHour} onChange={(e) => setStartHour(e.target.value)} style={{ ...inputStyle, textAlign: 'center' }} /> :
-                    <input value={startMin} onChange={(e) => setStartMin(e.target.value)} style={{ ...inputStyle, textAlign: 'center' }} />
+                    <input value={startHour} onChange={(e) => setStartHour(e.target.value)} style={{ ...inputStyle, textAlign: 'center' }} maxLength={2} /> :
+                    <input value={startMin} onChange={(e) => setStartMin(e.target.value)} style={{ ...inputStyle, textAlign: 'center' }} maxLength={2} />
                   </div>
                 </div>
                 <div>
                   <label style={labelStyle}>⏰ 종료시간</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <input value={endHour} onChange={(e) => setEndHour(e.target.value)} style={{ ...inputStyle, textAlign: 'center' }} /> :
-                    <input value={endMin} onChange={(e) => setEndMin(e.target.value)} style={{ ...inputStyle, textAlign: 'center' }} />
+                    <input value={endHour} onChange={(e) => setEndHour(e.target.value)} style={{ ...inputStyle, textAlign: 'center' }} maxLength={2} /> :
+                    <input value={endMin} onChange={(e) => setEndMin(e.target.value)} style={{ ...inputStyle, textAlign: 'center' }} maxLength={2} />
                   </div>
                 </div>
               </div>
@@ -1654,11 +1716,49 @@ function App() {
                 <textarea rows="4" value={workContent} onChange={(e) => setWorkContent(e.target.value)} style={inputStyle} placeholder="점검 및 수리 내용 작성" />
               </div>
 
+              {/* 부품 수동 입력 형태 */}
               <div>
-                <label style={labelStyle}>🔧 사용 부품 1</label>
-                <input value={usedParts[0] || ''} onChange={(e) => { const newParts = [...usedParts]; newParts[0] = e.target.value; setUsedParts(newParts); }} style={{ ...inputStyle, marginBottom: '6px' }} placeholder="부품명 또는 품번" />
-                <label style={labelStyle}>🔧 사용 부품 2</label>
-                <input value={usedParts[1] || ''} onChange={(e) => { const newParts = [...usedParts]; newParts[1] = e.target.value; setUsedParts(newParts); }} style={inputStyle} placeholder="부품명 또는 품번" />
+                <label style={labelStyle}>🔧 사용 부품 (수동 입력)</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {usedParts.map((item, index) => (
+                    <div key={index} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <input 
+                        type="text" 
+                        placeholder={`부품명 또는 품번 (예: 필터 KIT)`}
+                        value={item.name} 
+                        onChange={(e) => handleReportPartChange(index, 'name', e.target.value)}
+                        style={{ ...inputStyle, flex: 3 }}
+                      />
+
+                      <input 
+                        type="number" 
+                        placeholder="수량" 
+                        min="1"
+                        value={item.quantity} 
+                        onChange={(e) => handleReportPartChange(index, 'quantity', Number(e.target.value))}
+                        style={{ ...inputStyle, flex: 1, textAlign: 'center' }}
+                      />
+
+                      {usedParts.length > 1 && (
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoveReportPart(index)}
+                          style={{ padding: '8px 10px', backgroundColor: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button 
+                  type="button" 
+                  onClick={handleAddReportPart}
+                  style={{ width: '100%', marginTop: '8px', padding: '8px', backgroundColor: '#EFF6FF', color: '#2563EB', border: '1px dashed #2563EB', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  + 부품 추가
+                </button>
               </div>
 
               <div>
