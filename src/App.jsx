@@ -1724,7 +1724,7 @@ function App() {
                     <div key={index} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       <input 
                         type="text" 
-                        placeholder={`부품명 또는 품번 (예: 필터 KIT)`}
+                        placeholder={`부품명 또는 품번`}
                         value={item.name} 
                         onChange={(e) => handleReportPartChange(index, 'name', e.target.value)}
                         style={{ ...inputStyle, flex: 3 }}
