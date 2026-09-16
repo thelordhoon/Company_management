@@ -1718,7 +1718,6 @@ function App() {
 
               {/* 부품 수동 입력 형태 */}
               <div>
-                <label style={labelStyle}>🔧 사용 부품 (수동 입력)</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {usedParts.map((item, index) => (
                     <div key={index} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
