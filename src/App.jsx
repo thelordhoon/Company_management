@@ -1411,11 +1411,12 @@ function App() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                    <span style={{ color: '#64748B' }}>📍 주소</span>
-                    <span style={{ fontWeight: '500', color: '#1E293B', textAlign: 'right', maxWidth: '60%' }}>{selectedCompany.address || '-'}</span>
-                  </div>
-
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+  <span style={{ color: '#64748B' }}>📍 주소</span>
+  <span style={{ fontWeight: '500', color: '#1E293B', textAlign: 'left', wordBreak: 'keep-all' }}>
+    {selectedCompany.address || '-'}
+  </span>
+</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                     <span style={{ color: '#64748B', fontSize: '13px', fontWeight: '600' }}>📌 비고</span>
                     <div style={{ backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid #F1F5F9', color: '#334155', whiteSpace: 'pre-wrap', minHeight: '38px', fontSize: '13px' }}>
@@ -1750,7 +1751,7 @@ function App() {
                         type="number" 
                         placeholder="수량" 
                         min="1"
-                        value={item.quantity} 
+                        value={item.quantity || ''}
                         onChange={(e) => handleReportPartChange(index, 'quantity', Number(e.target.value))}
                         style={{ ...inputStyle, flex: 1, textAlign: 'center' }}
                       />
