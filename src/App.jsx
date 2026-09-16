@@ -1758,12 +1758,7 @@ function App() {
                   + 부품 추가
                 </button>
               </div>
-
-              <div>
-                <label style={labelStyle}>✍️ 확인자 성명</label>
-                <input value={confirmor} onChange={(e) => setConfirmor(e.target.value)} style={inputStyle} placeholder="고객사 담당자 성명" />
-              </div>
-
+          
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <label style={{ ...labelStyle, margin: 0 }}>✒️ 고객 서명</label>
