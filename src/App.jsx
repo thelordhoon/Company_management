@@ -1678,10 +1678,20 @@ function App() {
                 </div>
               </div>
 
-              <div>
-                 <input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} style={inputStyle} />
-              </div>
-
+              
+    <div>
+    <label style={labelStyle}>📅 작업일자</label>
+    <input 
+    type="date" 
+    value={workDate} 
+    onChange={(e) => setWorkDate(e.target.value)} 
+    style={{
+      ...inputStyle,
+      maxWidth: '100%',
+      WebkitAppearance: 'none' // iOS 기본 스타일 초기화
+    }} 
+  />
+</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={labelStyle}>⏰ 시작시간</label>
