@@ -1668,9 +1668,9 @@ function App() {
                     <option value="">담당자 선택</option>
                     {selectedCompany.managersList && selectedCompany.managersList.length > 0 ? (
                       selectedCompany.managersList.map((mgr, idx) => (
-                        <option key={idx} value={mgr.name}>
-                          {mgr.name ? `${mgr.name}` : '담당자'}
-                        </option>
+                       <option key={idx} value={mgr.name}>
+  {mgr.name ? `${mgr.name}${mgr.role ? ` (${mgr.role})` : ''}` : '담당자'}
+</option>
                       ))
                     ) : (
                       <option value="" disabled>등록된 담당자 없음</option>
