@@ -1631,7 +1631,7 @@ function App() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                         <span style={{ fontSize: '12px', color: '#2563EB', fontWeight: '600' }}>
-                          {h.work_date} ({h.start_time} ~ {h.end_time}) {h.report_url && ' 🖼️[리포트 보기]'}
+                          {h.work_date} ({h.start_time} ~ {h.end_time}) {h.report_url && ' [리포트 보기]'}
                         </span>
                         <button 
                           onClick={(e) => {
