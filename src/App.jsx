@@ -1851,7 +1851,7 @@ function App() {
           {/* 리포트 작성 화면과 동일한 프레임 비율 적용 */}
           <div style={{
             width: '100%',
-            maxWidth: '500px',
+            maxWidth: '480px',
             maxHeight: '97vh',
             overflowY: 'auto',
             borderRadius: '16px',
