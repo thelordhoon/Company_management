@@ -521,9 +521,14 @@ function App() {
 
     try {
       let reportImageUrl = ''
+if (reportFormRef.current) {
+        // 💡 1. 캡처 직전 날짜 입력창(type="date")을 type="text"로 강제 변환하여 아이콘 밀림 현상 방지
+        const dateInputs = reportFormRef.current.querySelectorAll('input[type="date"]');
+        dateInputs.forEach(el => {
+          el.type = 'text';
+          // 날짜 형식 예쁘게 보이도록 정렬 조절 필요 시 추가 가능
+        });
 
-      if (reportFormRef.current) {
-        // 💡 캡처 시 글자 잘림 방지를 위해 임시 스타일 적용
         const inputs = reportFormRef.current.querySelectorAll('input, select, textarea');
         inputs.forEach(el => {
           el.style.lineHeight = 'normal';
@@ -538,13 +543,18 @@ function App() {
           windowWidth: 480
         })
 
-        // 💡 캡처 직후 원래 스타일로 복구
+        // 💡 2. 캡처 끝나자마자 원래 type="date"로 원상복구
+        dateInputs.forEach(el => {
+          el.type = 'date';
+        });
+
         inputs.forEach(el => {
           el.style.lineHeight = '';
           el.style.paddingTop = '';
           el.style.paddingBottom = '';
         });
-
+        
+        // ... (이하 업로드 및 저장 로직 동일)
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
         
         if (blob) {
