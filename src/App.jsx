@@ -1624,7 +1624,7 @@ function App() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                         <span style={{ fontSize: '12px', color: '#2563EB', fontWeight: '600' }}>
-                          {h.work_date} ({h.start_time} ~ {h.end_time}) {h.report_url && ' 🖼️[리포트 보기]'}
+                          {h.work_date} ({h.start_time} ~ {h.end_time}) {h.report_url && ' [리포트 보기]'}
                         </span>
                         <button 
                           onClick={(e) => {
@@ -1677,7 +1677,7 @@ function App() {
               </div>
 
               <div>
-                <label style={labelStyle}>📅 작업 일자</label>
+                <label style={labelStyle}>작업 일자</label>
                 <input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} style={inputStyle} required />
               </div>
 
@@ -1716,17 +1716,17 @@ function App() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
-                  <label style={labelStyle}>🖨️ 모델명</label>
+                  <label style={labelStyle}>모델명</label>
                   <input value={modelName} onChange={(e) => setModelName(e.target.value)} style={inputStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>🔢 시리얼 번호 (S/N)</label>
+                  <label style={labelStyle}>시리얼 번호 (S/N)</label>
                   <input placeholder="S/N 입력" value={sn} onChange={(e) => setSn(e.target.value)} style={inputStyle} />
                 </div>
               </div>
 
               <div>
-                <label style={labelStyle}>👤 작업 담당자 선택</label>
+                <label style={labelStyle}>작업 담당자 선택</label>
                 <select value={selectedManager} onChange={(e) => setSelectedManager(e.target.value)} style={inputStyle}>
                   {selectedCompany.managersList && selectedCompany.managersList.map((m, idx) => (
                     <option key={idx} value={m.name}>{m.name} {m.role ? `(${m.role})` : ''}</option>
@@ -1735,13 +1735,13 @@ function App() {
               </div>
 
               <div>
-                <label style={labelStyle}>🛠️ 작업 내용</label>
+                <label style={labelStyle}>작업 내용</label>
                 <textarea rows="4" placeholder="수리 및 점검 내용을 입력하세요" value={workContent} onChange={(e) => setWorkContent(e.target.value)} style={inputStyle} />
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ ...labelStyle, margin: 0 }}>🔧 교체 파트 및 부품</label>
+                  <label style={{ ...labelStyle, margin: 0 }}>교체 파트 및 부품</label>
                   <button type="button" onClick={handleAddReportPart} style={{ border: 'none', background: '#EFF6FF', color: '#2563EB', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>+ 부품 추가</button>
                 </div>
                 {usedParts.map((p, idx) => (
@@ -1772,7 +1772,7 @@ function App() {
 
               <div style={{ marginTop: '6px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ ...labelStyle, margin: 0 }}>✍️ 고객 서명</label>
+                  <label style={{ ...labelStyle, margin: 0 }}>고객 서명</label>
                   <button type="button" onClick={clearSignature} style={{ border: 'none', background: '#F1F5F9', color: '#64748B', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>서명 초기화</button>
                 </div>
                 <div style={{ border: '1px solid #CBD5E1', borderRadius: '8px', backgroundColor: '#FFFFFF', overflow: 'hidden' }}>
