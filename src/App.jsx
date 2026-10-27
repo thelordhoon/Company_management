@@ -448,38 +448,31 @@ function App() {
     }
   }
 
- const handleDeleteHistoryItem = async (historyId) => {
+  // 🗑️ 이력 데이터 및 Supabase 스토리지 이미지 파일 동시 삭제
+  const handleDeleteHistoryItem = async (historyId) => {
     if (!window.confirm('선택한 서비스 이력을 삭제하시겠습니까?')) return
 
-    // 1. 삭제할 이력의 정보를 먼저 조회하여 report_url(이미지 주소)을 확보합니다.
-    const { data: targetHistory, error: fetchError } = await supabase
+    const { data: targetHistory } = await supabase
       .from('service_history')
       .select('report_url')
       .eq('id', historyId)
       .single()
 
-    if (!fetchError && targetHistory && targetHistory.report_url) {
+    if (targetHistory && targetHistory.report_url) {
       try {
-        // 2. URL에서 파일 이름 추출 (예: report_1_1710000000.png)
         const urlParts = targetHistory.report_url.split('/')
         const fileName = urlParts[urlParts.length - 1]
 
         if (fileName) {
-          // 3. Supabase Storage('reports' 버킷)에서 파일 삭제
-          const { error: storageError } = await supabase.storage
+          await supabase.storage
             .from('reports')
             .remove([fileName])
-
-          if (storageError) {
-            console.error('스토리지 이미지 삭제 실패:', storageError.message)
-          }
         }
       } catch (err) {
-        console.error('이미지 파일명 파싱 중 오류:', err)
+        console.error('스토리지 파일 삭제 오류:', err)
       }
     }
 
-    // 4. 데이터베이스에서 서비스 이력 데이터 삭제
     const { error } = await supabase
       .from('service_history')
       .delete()
@@ -1631,7 +1624,7 @@ function App() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                         <span style={{ fontSize: '12px', color: '#2563EB', fontWeight: '600' }}>
-                          {h.work_date} ({h.start_time} ~ {h.end_time}) {h.report_url && ' [리포트 보기]'}
+                          {h.work_date} ({h.start_time} ~ {h.end_time}) {h.report_url && ' 🖼️[리포트 보기]'}
                         </span>
                         <button 
                           onClick={(e) => {
@@ -1662,7 +1655,7 @@ function App() {
         </div>
       )}
 
-      {/* 3. 서비스 리포트 작성 화면 (서명 및 입력 폼 포함) */}
+      {/* 3. 서비스 리포트 작성 화면 */}
       {viewMode === 'report' && selectedCompany && (
         <div style={{ padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0 16px' }}>
@@ -1674,6 +1667,15 @@ function App() {
           <div ref={reportFormRef} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <form onSubmit={handleSaveReport} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               
+              {/* 🏢 상단 업체명 추가 표시 */}
+              <div style={{ backgroundColor: '#EFF6FF', padding: '12px 14px', borderRadius: '10px', border: '1px solid #DBEAFE', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '18px' }}>🏢</span>
+                <div>
+                  <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: '700', display: 'block' }}>업체명</span>
+                  <span style={{ fontSize: '16px', fontWeight: '800', color: '#1E3A8A' }}>{selectedCompany.name}</span>
+                </div>
+              </div>
+
               <div>
                 <label style={labelStyle}>📅 작업 일자</label>
                 <input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} style={inputStyle} required />
@@ -1712,7 +1714,6 @@ function App() {
                 </div>
               </div>
 
-              {/* 🖨️ 모델명 & 시리얼 번호 한 줄 배치 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
                   <label style={labelStyle}>🖨️ 모델명</label>
