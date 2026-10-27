@@ -448,7 +448,6 @@ function App() {
     }
   }
 
-  // 🗑️ 이력 데이터 및 Supabase 스토리지 이미지 파일 동시 삭제
   const handleDeleteHistoryItem = async (historyId) => {
     if (!window.confirm('선택한 서비스 이력을 삭제하시겠습니까?')) return
 
@@ -524,7 +523,28 @@ function App() {
       let reportImageUrl = ''
 
       if (reportFormRef.current) {
-        const canvas = await html2canvas(reportFormRef.current, { scale: 2, useCORS: true })
+        // 💡 캡처 시 글자 잘림 방지를 위해 임시 스타일 적용
+        const inputs = reportFormRef.current.querySelectorAll('input, select, textarea');
+        inputs.forEach(el => {
+          el.style.lineHeight = 'normal';
+          el.style.paddingTop = '12px';
+          el.style.paddingBottom = '12px';
+        });
+
+        const canvas = await html2canvas(reportFormRef.current, { 
+          scale: 2, 
+          useCORS: true,
+          width: 480,
+          windowWidth: 480
+        })
+
+        // 💡 캡처 직후 원래 스타일로 복구
+        inputs.forEach(el => {
+          el.style.lineHeight = '';
+          el.style.paddingTop = '';
+          el.style.paddingBottom = '';
+        });
+
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
         
         if (blob) {
@@ -1655,7 +1675,7 @@ function App() {
         </div>
       )}
 
-      {/* 3. 서비스 리포트 작성 화면 */}
+      {/* 3. 서비스 리포트 작성 화면 (이모티콘 제거 버전) */}
       {viewMode === 'report' && selectedCompany && (
         <div style={{ padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0 16px' }}>
@@ -1667,9 +1687,8 @@ function App() {
           <div ref={reportFormRef} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <form onSubmit={handleSaveReport} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               
-              {/* 🏢 상단 업체명 추가 표시 */}
+              {/* 상단 업체명 표시 (이모티콘 제거) */}
               <div style={{ backgroundColor: '#EFF6FF', padding: '12px 14px', borderRadius: '10px', border: '1px solid #DBEAFE', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '18px' }}>🏢</span>
                 <div>
                   <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: '700', display: 'block' }}>업체명</span>
                   <span style={{ fontSize: '16px', fontWeight: '800', color: '#1E3A8A' }}>{selectedCompany.name}</span>
