@@ -1807,7 +1807,7 @@ function App() {
         </div>
       )}
 
-      {/* 🖼️ 전체 화면 이미지 팝업 모달 */}
+    {/* 🖼️ 전체 화면 이미지 팝업 모달 */}
       {selectedReportImage && (
         <div style={{
           position: 'fixed',
@@ -1848,13 +1848,17 @@ function App() {
             ✕
           </button>
 
+          {/* 리포트 작성 화면과 동일한 프레임 비율 적용 */}
           <div style={{
-            maxWidth: '100%',
-            maxHeight: '85vh',
-            overflow: 'auto',
-            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '500px',
+            maxHeight: '97vh',
+            overflowY: 'auto',
+            borderRadius: '16px',
             backgroundColor: 'white',
-            padding: '10px'
+            padding: '12px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            boxSizing: 'border-box'
           }}>
             <img 
               src={selectedReportImage} 
