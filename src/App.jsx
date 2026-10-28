@@ -1707,15 +1707,32 @@ function App() {
           <div ref={reportFormRef} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <form onSubmit={handleSaveReport} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               
-              {/* 상단 업체명 & 작업일자 한 줄 배치 */}
+       {/* 상단 업체명 & 작업일자 한 줄 배치 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px' }}>
-                <div style={{ backgroundColor: '#EFF6FF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #DBEAFE', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ backgroundColor: '#EFF6FF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #DBEAFE', display: 'flex', flexDirection: 'column', justifyContent: 'center', boxSizing: 'border-box' }}>
                   <span style={{ fontSize: '10px', color: '#2563EB', fontWeight: '700', display: 'block', marginBottom: '2px' }}>업체명</span>
                   <span style={{ fontSize: '14px', fontWeight: '800', color: '#1E3A8A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedCompany.name}</span>
                 </div>
-                <div style={{ backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'center', boxSizing: 'border-box' }}>
                   <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '700', display: 'block', marginBottom: '2px' }}>작업 일자</span>
-                  <input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: '13px', fontWeight: '700', color: '#1E293B', padding: 0, outline: 'none', width: '100%' }} required />
+                  <input 
+                    type="date" 
+                    value={workDate} 
+                    onChange={(e) => setWorkDate(e.target.value)} 
+                    style={{ 
+                      border: 'none', 
+                      background: 'transparent', 
+                      fontSize: '13px', 
+                      fontWeight: '700', 
+                      color: '#1E293B', 
+                      padding: 0, 
+                      margin: 0,
+                      outline: 'none', 
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }} 
+                    required 
+                  />
                 </div>
               </div>
 
