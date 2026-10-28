@@ -81,7 +81,7 @@ function App() {
   const [endHour, setEndHour] = useState('18')
   const [endMin, setEndMin] = useState('00')
   const [sn, setSn] = useState('')
-  const [modelName, setModelName] = useState('JET2Neo')
+  const [modelName, setModelName] = useState('JET2Neo') // 기본값 JET2Neo
   const [workContent, setWorkContent] = useState('')
   const [selectedManager, setSelectedManager] = useState('')
   
@@ -521,12 +521,17 @@ function App() {
 
     try {
       let reportImageUrl = ''
-if (reportFormRef.current) {
-        // 💡 1. 캡처 직전 날짜 입력창(type="date")을 type="text"로 강제 변환하여 아이콘 밀림 현상 방지
+
+      if (reportFormRef.current) {
         const dateInputs = reportFormRef.current.querySelectorAll('input[type="date"]');
         dateInputs.forEach(el => {
           el.type = 'text';
-          // 날짜 형식 예쁘게 보이도록 정렬 조절 필요 시 추가 가능
+          el.style.appearance = 'none';
+          el.style.webkitAppearance = 'none';
+          el.style.border = '1px solid #E2E8F0';
+          el.style.backgroundColor = '#F8FAFC';
+          el.style.borderRadius = '8px';
+          el.style.padding = '10px 12px';
         });
 
         const inputs = reportFormRef.current.querySelectorAll('input, select, textarea');
@@ -543,9 +548,14 @@ if (reportFormRef.current) {
           windowWidth: 480
         })
 
-        // 💡 2. 캡처 끝나자마자 원래 type="date"로 원상복구
         dateInputs.forEach(el => {
           el.type = 'date';
+          el.style.appearance = '';
+          el.style.webkitAppearance = '';
+          el.style.border = '';
+          el.style.backgroundColor = '';
+          el.style.borderRadius = '';
+          el.style.padding = '';
         });
 
         inputs.forEach(el => {
@@ -553,8 +563,7 @@ if (reportFormRef.current) {
           el.style.paddingTop = '';
           el.style.paddingBottom = '';
         });
-        
-        // ... (이하 업로드 및 저장 로직 동일)
+
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
         
         if (blob) {
@@ -601,6 +610,7 @@ if (reportFormRef.current) {
         alert('서비스 리포트가 성공적으로 저장되었습니다!')
         setWorkContent('')
         setSn('')
+        setModelName('JET2Neo') // 저장 후 기본값으로 재설정
         setUsedParts([{ name: '', quantity: 1 }])
         clearSignature()
         fetchAllServiceHistories()
@@ -1097,7 +1107,7 @@ if (reportFormRef.current) {
                               boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
                               display: 'flex',
                               alignItems: 'center',
-                              justify: 'space-between',
+                              justifyContent: 'space-between',
                               border: '1px solid #F1F5F9'
                             }}
                           >
@@ -1685,7 +1695,7 @@ if (reportFormRef.current) {
         </div>
       )}
 
-      {/* 3. 서비스 리포트 작성 화면 (이모티콘 제거 버전) */}
+      {/* 3. 서비스 리포트 작성 화면 (모델명 드롭다운 목차 반영) */}
       {viewMode === 'report' && selectedCompany && (
         <div style={{ padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0 16px' }}>
@@ -1697,17 +1707,16 @@ if (reportFormRef.current) {
           <div ref={reportFormRef} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <form onSubmit={handleSaveReport} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               
-              {/* 상단 업체명 표시 (이모티콘 제거) */}
-              <div style={{ backgroundColor: '#EFF6FF', padding: '12px 14px', borderRadius: '10px', border: '1px solid #DBEAFE', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div>
-                  <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: '700', display: 'block' }}>업체명</span>
-                  <span style={{ fontSize: '16px', fontWeight: '800', color: '#1E3A8A' }}>{selectedCompany.name}</span>
+              {/* 상단 업체명 & 작업일자 한 줄 배치 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px' }}>
+                <div style={{ backgroundColor: '#EFF6FF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #DBEAFE', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '10px', color: '#2563EB', fontWeight: '700', display: 'block', marginBottom: '2px' }}>업체명</span>
+                  <span style={{ fontSize: '14px', fontWeight: '800', color: '#1E3A8A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedCompany.name}</span>
                 </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>작업 일자</label>
-                <input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} style={inputStyle} required />
+                <div style={{ backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '700', display: 'block', marginBottom: '2px' }}>작업 일자</span>
+                  <input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: '13px', fontWeight: '700', color: '#1E293B', padding: 0, outline: 'none', width: '100%' }} required />
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -1743,10 +1752,17 @@ if (reportFormRef.current) {
                 </div>
               </div>
 
+              {/* 모델명 목차 드롭다운 선택 수정 부분 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
                   <label style={labelStyle}>모델명</label>
-                  <input value={modelName} onChange={(e) => setModelName(e.target.value)} style={inputStyle} />
+                  <select value={modelName} onChange={(e) => setModelName(e.target.value)} style={inputStyle}>
+                    <option value="JET1Neo">JET1Neo</option>
+                    <option value="JET2Neo">JET2Neo</option>
+                    <option value="JET3">JET3</option>
+                    <option value="JET3up">JET3up</option>
+                    <option value="JET3pi">JET3pi</option>
+                  </select>
                 </div>
                 <div>
                   <label style={labelStyle}>시리얼 번호 (S/N)</label>
@@ -1817,7 +1833,7 @@ if (reportFormRef.current) {
         </div>
       )}
 
-    {/* 🖼️ 전체 화면 이미지 팝업 모달 */}
+      {/* 🖼️ 전체 화면 이미지 팝업 모달 */}
       {selectedReportImage && (
         <div style={{
           position: 'fixed',
@@ -1858,11 +1874,10 @@ if (reportFormRef.current) {
             ✕
           </button>
 
-          {/* 리포트 작성 화면과 동일한 프레임 비율 적용 */}
           <div style={{
             width: '100%',
-            maxWidth: '480px',
-            maxHeight: '97vh',
+            maxWidth: '460px',
+            maxHeight: '85vh',
             overflowY: 'auto',
             borderRadius: '16px',
             backgroundColor: 'white',
