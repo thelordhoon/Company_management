@@ -45,6 +45,7 @@ function App() {
   const [companySearchTerm, setCompanySearchTerm] = useState('')
   const [snPartSearchTerm, setSnPartSearchTerm] = useState('')
   const [showRecentOnly, setShowRecentOnly] = useState(false)
+  const [companySortType, setCompanySortType] = useState('recent_history') // 'recent_history' | 'name_korean' | 'latest_reg'
 
   const [detailSnSearchTerm, setDetailSnSearchTerm] = useState('')
 
@@ -81,7 +82,7 @@ function App() {
   const [endHour, setEndHour] = useState('18')
   const [endMin, setEndMin] = useState('00')
   const [sn, setSn] = useState('')
-  const [modelName, setModelName] = useState('JET2Neo') // 기본값 JET2Neo
+  const [modelName, setModelName] = useState('JET2Neo')
   const [workContent, setWorkContent] = useState('')
   const [selectedManager, setSelectedManager] = useState('')
   
@@ -585,6 +586,29 @@ function App() {
         }
       }
 
+      for (const p of usedParts) {
+        if (!p.name || !p.name.trim()) continue;
+        const usedQty = Number(p.quantity) || 0;
+        if (usedQty <= 0) continue;
+
+        const query = p.name.trim().toLowerCase();
+        const matchedPart = partsList.find(item => 
+          (item.name && item.name.trim().toLowerCase() === query) ||
+          (item.code && item.code.trim().toLowerCase() === query)
+        );
+
+        if (matchedPart) {
+          const currentStock = Number(matchedPart.stock) || 0;
+          const newStock = Math.max(0, currentStock - usedQty);
+
+          await supabase
+            .from('parts')
+            .update({ stock: newStock })
+            .eq('id', matchedPart.id);
+        }
+      }
+      fetchParts();
+
       const formattedParts = usedParts
         .filter(p => p.name && p.name.trim() !== '')
         .map(p => `${p.name.trim()} (${p.quantity}개)`)
@@ -607,10 +631,10 @@ function App() {
       if (error) {
         alert('리포트 저장 실패: ' + error.message)
       } else {
-        alert('서비스 리포트가 성공적으로 저장되었습니다!')
+        alert('서비스 리포트가 저장되고 사용된 부품 재고가 자동 차감되었습니다!')
         setWorkContent('')
         setSn('')
-        setModelName('JET2Neo') // 저장 후 기본값으로 재설정
+        setModelName('JET2Neo')
         setUsedParts([{ name: '', quantity: 1 }])
         clearSignature()
         fetchAllServiceHistories()
@@ -624,12 +648,47 @@ function App() {
     }
   }
 
-  let baseCompanies = [...companies].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-  if (showRecentOnly) baseCompanies = baseCompanies.slice(0, 5)
+  // 💡 업체 목록 정렬 및 필터링 로직
+  const getLatestHistoryDate = (companyId) => {
+    const compHistories = allHistories.filter(h => h.company_id === companyId)
+    if (compHistories.length === 0) return 0
+    // 가장 최근 생성일 기준
+    return Math.max(...compHistories.map(h => new Date(h.created_at || h.work_date).getTime()))
+  }
+
+  const cleanCompanyName = (name) => {
+    if (!name) return ''
+    // (주), 주식회사, ㈜ 및 특수문자/공백 제거 후 순수 회사명 추출
+    return name.replace(/\(주\)|주식회사|\(주|\주|\u321C/g, '').trim()
+  }
+
+  let processedCompanies = [...companies]
+
+  if (companySortType === 'recent_history') {
+    processedCompanies.sort((a, b) => {
+      const timeA = getLatestHistoryDate(a.id)
+      const timeB = getLatestHistoryDate(b.id)
+      if (timeA !== timeB) {
+        return timeB - timeA // 최근 이력이 위로
+      }
+      return new Date(b.created_at) - new Date(a.created_at) // 이력이 없으면 등록순
+    })
+  } else if (companySortType === 'name_korean') {
+    processedCompanies.sort((a, b) => {
+      const nameA = cleanCompanyName(a.name)
+      const nameB = cleanCompanyName(b.name)
+      return nameA.localeCompare(nameB, 'ko') // ㄱㄴㄷ 순
+    })
+  } else {
+    // 기본 최신 등록순
+    processedCompanies.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  }
+
+  if (showRecentOnly) processedCompanies = processedCompanies.slice(0, 5)
 
   const filteredCompanies = companySearchTerm.trim() === '' 
-    ? baseCompanies 
-    : baseCompanies.filter(c => 
+    ? processedCompanies 
+    : processedCompanies.filter(c => 
         (c.name && c.name.toLowerCase().includes(companySearchTerm.toLowerCase())) ||
         (c.manager && c.manager.toLowerCase().includes(companySearchTerm.toLowerCase()))
       )
@@ -1016,14 +1075,51 @@ function App() {
 
             {mainTab === 'companies' && (
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 4px 12px 4px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1E293B', margin: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 4px 12px 4px', flexWrap: 'wrap', gap: '6px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#1E293B', margin: 0 }}>
                     {isSnSearching 
                       ? `📋 서비스 이력 검색 결과 (${filteredAllHistories.length})` 
                       : showRecentOnly 
                         ? `🆕 최근 등록 업체 (최대 5개)` 
                         : `🏢 업체 목록 (${filteredCompanies.length})`}
                   </h3>
+
+                  {/* 💡 작고 깔끔한 정렬 토글 버튼들 */}
+                  {!isSnSearching && (
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        onClick={() => setCompanySortType('recent_history')}
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: companySortType === 'recent_history' ? '#2563EB' : '#E2E8F0',
+                          color: companySortType === 'recent_history' ? 'white' : '#64748B',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        최근이력순
+                      </button>
+                      <button
+                        onClick={() => setCompanySortType('name_korean')}
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: companySortType === 'name_korean' ? '#2563EB' : '#E2E8F0',
+                          color: companySortType === 'name_korean' ? 'white' : '#64748B',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        가나다순
+                      </button>
+                    </div>
+                  )}
+
                   {showRecentOnly && (
                     <span onClick={() => setShowRecentOnly(false)} style={{ fontSize: '12px', color: '#2563EB', cursor: 'pointer', fontWeight: '600' }}>
                       전체 보기 ✕
@@ -1695,7 +1791,7 @@ function App() {
         </div>
       )}
 
-      {/* 3. 서비스 리포트 작성 화면 (모델명 드롭다운 목차 반영) */}
+      {/* 3. 서비스 리포트 작성 화면 */}
       {viewMode === 'report' && selectedCompany && (
         <div style={{ padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0 16px' }}>
@@ -1707,7 +1803,6 @@ function App() {
           <div ref={reportFormRef} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <form onSubmit={handleSaveReport} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               
-       {/* 상단 업체명 & 작업일자 한 줄 배치 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px' }}>
                 <div style={{ backgroundColor: '#EFF6FF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #DBEAFE', display: 'flex', flexDirection: 'column', justifyContent: 'center', boxSizing: 'border-box' }}>
                   <span style={{ fontSize: '10px', color: '#2563EB', fontWeight: '700', display: 'block', marginBottom: '2px' }}>업체명</span>
@@ -1769,7 +1864,6 @@ function App() {
                 </div>
               </div>
 
-              {/* 모델명 목차 드롭다운 선택 수정 부분 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
                   <label style={labelStyle}>모델명</label>
@@ -1850,7 +1944,7 @@ function App() {
         </div>
       )}
 
-      {/* 🖼️ 전체 화면 이미지 팝업 모달 */}
+      {/* 🖼️ 전체 화면 이미지 팝업 모달 (인쇄/다운로드 기능 포함) */}
       {selectedReportImage && (
         <div style={{
           position: 'fixed',
@@ -1894,7 +1988,7 @@ function App() {
           <div style={{
             width: '100%',
             maxWidth: '460px',
-            maxHeight: '85vh',
+            maxHeight: '75vh',
             overflowY: 'auto',
             borderRadius: '16px',
             backgroundColor: 'white',
@@ -1904,10 +1998,49 @@ function App() {
           }}>
             <img 
               src={selectedReportImage} 
-              alt="서비스 리포트 이미지" 
+              alt="서비스 리포트 출고증" 
               style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} 
             />
           </div>
+
+          <button
+            onClick={() => {
+              const printWindow = window.open('', '_blank');
+              printWindow.document.write(`
+                <html>
+                  <head>
+                    <title>서비스 리포트 출고증</title>
+                    <style>
+                      body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+                      img { max-width: 100%; height: auto; }
+                      @page { size: auto; margin: 10mm; }
+                    </style>
+                  </head>
+                  <body>
+                    <img src="${selectedReportImage}" onload="window.print(); window.close();" />
+                  </body>
+                </html>
+              `);
+              printWindow.document.close();
+            }}
+            style={{
+              marginTop: '16px',
+              backgroundColor: '#2563EB',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '12px 24px',
+              fontSize: '15px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            🖨️ 출고증 인쇄 / PDF 저장
+          </button>
         </div>
       )}
 
