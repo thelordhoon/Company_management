@@ -2003,44 +2003,7 @@ function App() {
             />
           </div>
 
-          <button
-            onClick={() => {
-              const printWindow = window.open('', '_blank');
-              printWindow.document.write(`
-                <html>
-                  <head>
-                    <title>서비스 리포트 출고증</title>
-                    <style>
-                      body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-                      img { max-width: 100%; height: auto; }
-                      @page { size: auto; margin: 10mm; }
-                    </style>
-                  </head>
-                  <body>
-                    <img src="${selectedReportImage}" onload="window.print(); window.close();" />
-                  </body>
-                </html>
-              `);
-              printWindow.document.close();
-            }}
-            style={{
-              marginTop: '16px',
-              backgroundColor: '#2563EB',
-              color: 'white',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '12px 24px',
-              fontSize: '15px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            🖨️ 출고증 인쇄 / PDF 저장
-          </button>
+         
         </div>
       )}
 
