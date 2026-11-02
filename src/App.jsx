@@ -716,6 +716,7 @@ function App() {
     width: '100%',
     padding: '10px 12px',
     fontSize: '14px',
+    lineHeight: 'normal',
     borderRadius: '8px',
     border: '1px solid #E2E8F0',
     backgroundColor: '#F8FAFC',
