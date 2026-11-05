@@ -1578,67 +1578,113 @@ function App() {
                     </div>
                   </div>
 
-                  {(() => {
-                    const inkInfo = getPartPriceInfo(selectedCompany.ink, selectedCompany.name);
-                    const solventInfo = getPartPriceInfo(selectedCompany.solvent, selectedCompany.name);
+                 {(() => {
+  // 쉼표(,)나 공백 구분자로 다중 품번을 배열로 파싱하는 헬퍼 함수
+  const parsePartCodes = (rawStr) => {
+    if (!rawStr) return [];
+    return rawStr
+      .split(/[,,\n]+/)
+      .map(item => item.trim())
+      .filter(Boolean);
+  };
 
-                    return (
-                      <div style={{ backgroundColor: '#EFF6FF', padding: '14px', borderRadius: '12px', marginTop: '6px', border: '1px solid #DBEAFE' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <div>
-                            <span style={{ color: '#1E40AF', fontWeight: '600', fontSize: '13px', display: 'block' }}>🧪 잉크 품번</span>
-                            <span style={{ fontWeight: '700', color: '#1E3A8A', fontSize: '14px' }}>{selectedCompany.ink || '미등록'}</span>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            {inkInfo && inkInfo.found ? (
-                              <div>
-                                {inkInfo.isSpecial ? (
-                                  <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FCD34D', display: 'inline-block', marginBottom: '2px' }}>
-                                     업체 특별가
-                                  </span>
-                                ) : (
-                                  <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginBottom: '2px' }}>기본가</span>
-                                )}
-                                <div style={{ fontWeight: '800', color: inkInfo.isSpecial ? '#D97706' : '#2563EB', fontSize: '15px' }}>
-                                  {inkInfo.finalPrice.toLocaleString()} 원
-                                </div>
-                              </div>
-                            ) : (
-                              selectedCompany.ink && <span style={{ fontSize: '11px', color: '#94A3B8' }}>부품 미등록</span>
-                            )}
-                          </div>
-                        </div>
+  const inkCodes = parsePartCodes(selectedCompany.ink);
+  const solventCodes = parsePartCodes(selectedCompany.solvent);
 
-                        <div style={{ height: '1px', backgroundColor: '#BFDBFE', margin: '8px 0' }}></div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <span style={{ color: '#1E40AF', fontWeight: '600', fontSize: '13px', display: 'block' }}>💧 희석제 품번</span>
-                            <span style={{ fontWeight: '700', color: '#1E3A8A', fontSize: '14px' }}>{selectedCompany.solvent || '미등록'}</span>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            {solventInfo && solventInfo.found ? (
-                              <div>
-                                {solventInfo.isSpecial ? (
-                                  <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FCD34D', display: 'inline-block', marginBottom: '2px' }}>
-                                     업체 특별가
-                                  </span>
-                                ) : (
-                                  <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginBottom: '2px' }}>기본가</span>
-                                )}
-                                <div style={{ fontWeight: '800', color: solventInfo.isSpecial ? '#D97706' : '#2563EB', fontSize: '15px' }}>
-                                  {solventInfo.finalPrice.toLocaleString()} 원
-                                </div>
-                              </div>
-                            ) : (
-                              selectedCompany.solvent && <span style={{ fontSize: '11px', color: '#94A3B8' }}>부품 미등록</span>
-                            )}
-                          </div>
+  return (
+    <div style={{ backgroundColor: '#EFF6FF', padding: '14px', borderRadius: '12px', marginTop: '6px', border: '1px solid #DBEAFE' }}>
+      {/* 🧪 잉크 목록 */}
+      <div>
+        <span style={{ color: '#1E40AF', fontWeight: '700', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
+          🧪 잉크 품번 및 단가 정보
+        </span>
+        {inkCodes.length === 0 ? (
+          <span style={{ fontSize: '13px', color: '#94A3B8' }}>미등록</span>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {inkCodes.map((code, idx) => {
+              const info = getPartPriceInfo(code, selectedCompany.name);
+              return (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #DBEAFE' }}>
+                  <div>
+                    <span style={{ fontWeight: '700', color: '#1E3A8A', fontSize: '13px', display: 'block' }}>{code}</span>
+                    {info && info.found && (
+                      <span style={{ fontSize: '11px', color: '#64748B' }}>{info.partName}</span>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    {info && info.found ? (
+                      <div>
+                        {info.isSpecial ? (
+                          <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#D97706', padding: '1px 5px', borderRadius: '4px', border: '1px solid #FCD34D', display: 'inline-block', marginBottom: '2px' }}>
+                            업체 특별가
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginBottom: '2px' }}>기본가</span>
+                        )}
+                        <div style={{ fontWeight: '800', color: info.isSpecial ? '#D97706' : '#2563EB', fontSize: '14px' }}>
+                          {info.finalPrice.toLocaleString()} 원
                         </div>
                       </div>
-                    )
-                  })()}
+                    ) : (
+                      <span style={{ fontSize: '11px', color: '#EF4444', backgroundColor: '#FEE2E2', padding: '2px 6px', borderRadius: '4px' }}>부품 미등록</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
+      <div style={{ height: '1px', backgroundColor: '#BFDBFE', margin: '12px 0' }}></div>
+
+      {/* 💧 희석제 목록 */}
+      <div>
+        <span style={{ color: '#1E40AF', fontWeight: '700', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
+          💧 희석제 품번 및 단가 정보
+        </span>
+        {solventCodes.length === 0 ? (
+          <span style={{ fontSize: '13px', color: '#94A3B8' }}>미등록</span>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {solventCodes.map((code, idx) => {
+              const info = getPartPriceInfo(code, selectedCompany.name);
+              return (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #DBEAFE' }}>
+                  <div>
+                    <span style={{ fontWeight: '700', color: '#1E3A8A', fontSize: '13px', display: 'block' }}>{code}</span>
+                    {info && info.found && (
+                      <span style={{ fontSize: '11px', color: '#64748B' }}>{info.partName}</span>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    {info && info.found ? (
+                      <div>
+                        {info.isSpecial ? (
+                          <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#D97706', padding: '1px 5px', borderRadius: '4px', border: '1px solid #FCD34D', display: 'inline-block', marginBottom: '2px' }}>
+                            업체 특별가
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginBottom: '2px' }}>기본가</span>
+                        )}
+                        <div style={{ fontWeight: '800', color: info.isSpecial ? '#D97706' : '#2563EB', fontSize: '14px' }}>
+                          {info.finalPrice.toLocaleString()} 원
+                        </div>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '11px', color: '#EF4444', backgroundColor: '#FEE2E2', padding: '2px 6px', borderRadius: '4px' }}>부품 미등록</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+})()}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '20px' }}>
