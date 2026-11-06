@@ -8,6 +8,13 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 function App() {
+  // 💡 [추가] 인증 세션 및 로그인 상태 관련 State
+  const [session, setSession] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
+
   const [companies, setCompanies] = useState([])
   const [allHistories, setAllHistories] = useState([])
   
@@ -96,11 +103,45 @@ function App() {
 
   const sigCanvas = useRef({})
 
+  // 💡 [추가] 1. 브라우저 저장소(localStorage)의 세션 자동 체크 및 토큰 유효성 수신
   useEffect(() => {
-    fetchCompanies()
-    fetchAllServiceHistories()
-    fetchParts()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setAuthLoading(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      setAuthLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (session) {
+      fetchCompanies()
+      fetchAllServiceHistories()
+      fetchParts()
+    }
+  }, [session])
+
+  // 💡 [추가] 로그인 및 로그아웃 핸들러
+  const handleLogin = async (e) => {
+    e.preventDefault()
+    setLoginError('')
+    setUploading(true)
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    setUploading(false)
+    if (error) {
+      setLoginError('로그인 실패: 이메일 또는 비밀번호를 확인하세요.')
+    }
+  }
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    setSession(null)
+  }
 
   const fetchCompanies = async () => {
     const { data, error } = await supabase.from('companies').select('*').order('created_at', { ascending: false })
@@ -648,17 +689,14 @@ function App() {
     }
   }
 
-  // 💡 업체 목록 정렬 및 필터링 로직
   const getLatestHistoryDate = (companyId) => {
     const compHistories = allHistories.filter(h => h.company_id === companyId)
     if (compHistories.length === 0) return 0
-    // 가장 최근 생성일 기준
     return Math.max(...compHistories.map(h => new Date(h.created_at || h.work_date).getTime()))
   }
 
   const cleanCompanyName = (name) => {
     if (!name) return ''
-    // (주), 주식회사, ㈜ 및 특수문자/공백 제거 후 순수 회사명 추출
     return name.replace(/\(주\)|주식회사|\(주|\주|\u321C/g, '').trim()
   }
 
@@ -669,18 +707,17 @@ function App() {
       const timeA = getLatestHistoryDate(a.id)
       const timeB = getLatestHistoryDate(b.id)
       if (timeA !== timeB) {
-        return timeB - timeA // 최근 이력이 위로
+        return timeB - timeA
       }
-      return new Date(b.created_at) - new Date(a.created_at) // 이력이 없으면 등록순
+      return new Date(b.created_at) - new Date(a.created_at)
     })
   } else if (companySortType === 'name_korean') {
     processedCompanies.sort((a, b) => {
       const nameA = cleanCompanyName(a.name)
       const nameB = cleanCompanyName(b.name)
-      return nameA.localeCompare(nameB, 'ko') // ㄱㄴㄷ 순
+      return nameA.localeCompare(nameB, 'ko')
     })
   } else {
-    // 기본 최신 등록순
     processedCompanies.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
   }
 
@@ -733,6 +770,70 @@ function App() {
     display: 'block'
   }
 
+  // 💡 [추가] 초기 세션 체크 로딩 중 화면
+  if (authLoading) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', backgroundColor: '#F4F7FB' }}>
+        <span style={{ fontSize: '14px', color: '#64748B', fontWeight: '600' }}>보안 인증 정보 확인 중...</span>
+      </div>
+    )
+  }
+
+  // 💡 [추가] 로그인이 되어있지 않은 경우 모바일 최적화 로그인 폼 출력 (최초 1회 로그인 후 영구 유지)
+  if (!session) {
+    return (
+      <div style={{ backgroundColor: '#F4F7FB', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', maxWidth: '360px', backgroundColor: 'white', borderRadius: '20px', padding: '28px 24px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ width: '50px', height: '50px', backgroundColor: '#EFF6FF', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: '24px' }}>📱</div>
+            <h2 style={{ margin: '0 0 6px 0', fontSize: '20px', fontWeight: '800', color: '#0F172A' }}>MACE Mobile</h2>
+            <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>최초 1회 로그인 후 자동으로 유지됩니다.</p>
+          </div>
+
+          {loginError && (
+            <div style={{ backgroundColor: '#FEE2E2', color: '#EF4444', padding: '10px 12px', borderRadius: '8px', fontSize: '12px', marginBottom: '14px', fontWeight: '600' }}>
+              {loginError}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div>
+              <label style={labelStyle}>이메일</label>
+              <input 
+                type="email" 
+                placeholder="이메일을 입력하세요" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                style={inputStyle} 
+                required 
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>비밀번호</label>
+              <input 
+                type="password" 
+                placeholder="비밀번호를 입력하세요" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                style={inputStyle} 
+                required 
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={uploading} 
+              style={{ padding: '12px', background: '#2563EB', color: 'white', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', marginTop: '6px' }}
+            >
+              {uploading ? '로그인 처리 중...' : '로그인'}
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ backgroundColor: '#F4F7FB', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', maxWidth: '480px', margin: '0 auto', position: 'relative', paddingBottom: '24px', boxSizing: 'border-box' }}>
       
@@ -742,6 +843,13 @@ function App() {
           <div style={{ background: 'linear-gradient(135deg, #1E60E8 0%, #0093E9 100%)', padding: '24px 20px 28px', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px', color: 'white' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <span style={{ fontSize: '20px', cursor: 'pointer' }}>☰</span>
+              {/* 💡 [추가] 모바일 상단 로그아웃 버튼 */}
+              <button 
+                onClick={handleLogout} 
+                style={{ border: 'none', background: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                로그아웃
+              </button>
             </div>
             
             <h1 style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '800' }}>
@@ -1085,7 +1193,6 @@ function App() {
                         : `🏢 업체 목록 (${filteredCompanies.length})`}
                   </h3>
 
-                  {/* 💡 작고 깔끔한 정렬 토글 버튼들 */}
                   {!isSnSearching && (
                     <div style={{ display: 'flex', gap: '4px' }}>
                       <button
@@ -1579,112 +1686,109 @@ function App() {
                   </div>
 
                  {(() => {
-  // 쉼표(,)나 공백 구분자로 다중 품번을 배열로 파싱하는 헬퍼 함수
-  const parsePartCodes = (rawStr) => {
-    if (!rawStr) return [];
-    return rawStr
-      .split(/[,,\n]+/)
-      .map(item => item.trim())
-      .filter(Boolean);
-  };
+                  const parsePartCodes = (rawStr) => {
+                    if (!rawStr) return [];
+                    return rawStr
+                      .split(/[,,\n]+/)
+                      .map(item => item.trim())
+                      .filter(Boolean);
+                  };
 
-  const inkCodes = parsePartCodes(selectedCompany.ink);
-  const solventCodes = parsePartCodes(selectedCompany.solvent);
+                  const inkCodes = parsePartCodes(selectedCompany.ink);
+                  const solventCodes = parsePartCodes(selectedCompany.solvent);
 
-  return (
-    <div style={{ backgroundColor: '#EFF6FF', padding: '14px', borderRadius: '12px', marginTop: '6px', border: '1px solid #DBEAFE' }}>
-      {/* 🧪 잉크 목록 */}
-      <div>
-        <span style={{ color: '#1E40AF', fontWeight: '700', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
-          🧪 잉크 품번 및 단가 정보
-        </span>
-        {inkCodes.length === 0 ? (
-          <span style={{ fontSize: '13px', color: '#94A3B8' }}>미등록</span>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {inkCodes.map((code, idx) => {
-              const info = getPartPriceInfo(code, selectedCompany.name);
-              return (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #DBEAFE' }}>
-                  <div>
-                    <span style={{ fontWeight: '700', color: '#1E3A8A', fontSize: '13px', display: 'block' }}>{code}</span>
-                    {info && info.found && (
-                      <span style={{ fontSize: '11px', color: '#64748B' }}>{info.partName}</span>
-                    )}
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    {info && info.found ? (
+                  return (
+                    <div style={{ backgroundColor: '#EFF6FF', padding: '14px', borderRadius: '12px', marginTop: '6px', border: '1px solid #DBEAFE' }}>
                       <div>
-                        {info.isSpecial ? (
-                          <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#D97706', padding: '1px 5px', borderRadius: '4px', border: '1px solid #FCD34D', display: 'inline-block', marginBottom: '2px' }}>
-                            업체 특별가
-                          </span>
+                        <span style={{ color: '#1E40AF', fontWeight: '700', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
+                          🧪 잉크 품번 및 단가 정보
+                        </span>
+                        {inkCodes.length === 0 ? (
+                          <span style={{ fontSize: '13px', color: '#94A3B8' }}>미등록</span>
                         ) : (
-                          <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginBottom: '2px' }}>기본가</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {inkCodes.map((code, idx) => {
+                              const info = getPartPriceInfo(code, selectedCompany.name);
+                              return (
+                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #DBEAFE' }}>
+                                  <div>
+                                    <span style={{ fontWeight: '700', color: '#1E3A8A', fontSize: '13px', display: 'block' }}>{code}</span>
+                                    {info && info.found && (
+                                      <span style={{ fontSize: '11px', color: '#64748B' }}>{info.partName}</span>
+                                    )}
+                                  </div>
+                                  <div style={{ textAlign: 'right' }}>
+                                    {info && info.found ? (
+                                      <div>
+                                        {info.isSpecial ? (
+                                          <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#D97706', padding: '1px 5px', borderRadius: '4px', border: '1px solid #FCD34D', display: 'inline-block', marginBottom: '2px' }}>
+                                            업체 특별가
+                                          </span>
+                                        ) : (
+                                          <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginBottom: '2px' }}>기본가</span>
+                                        )}
+                                        <div style={{ fontWeight: '800', color: info.isSpecial ? '#D97706' : '#2563EB', fontSize: '14px' }}>
+                                          {info.finalPrice.toLocaleString()} 원
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <span style={{ fontSize: '11px', color: '#EF4444', backgroundColor: '#FEE2E2', padding: '2px 6px', borderRadius: '4px' }}>부품 미등록</span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
-                        <div style={{ fontWeight: '800', color: info.isSpecial ? '#D97706' : '#2563EB', fontSize: '14px' }}>
-                          {info.finalPrice.toLocaleString()} 원
-                        </div>
                       </div>
-                    ) : (
-                      <span style={{ fontSize: '11px', color: '#EF4444', backgroundColor: '#FEE2E2', padding: '2px 6px', borderRadius: '4px' }}>부품 미등록</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
-      <div style={{ height: '1px', backgroundColor: '#BFDBFE', margin: '12px 0' }}></div>
+                      <div style={{ height: '1px', backgroundColor: '#BFDBFE', margin: '12px 0' }}></div>
 
-      {/* 💧 희석제 목록 */}
-      <div>
-        <span style={{ color: '#1E40AF', fontWeight: '700', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
-          💧 희석제 품번 및 단가 정보
-        </span>
-        {solventCodes.length === 0 ? (
-          <span style={{ fontSize: '13px', color: '#94A3B8' }}>미등록</span>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {solventCodes.map((code, idx) => {
-              const info = getPartPriceInfo(code, selectedCompany.name);
-              return (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #DBEAFE' }}>
-                  <div>
-                    <span style={{ fontWeight: '700', color: '#1E3A8A', fontSize: '13px', display: 'block' }}>{code}</span>
-                    {info && info.found && (
-                      <span style={{ fontSize: '11px', color: '#64748B' }}>{info.partName}</span>
-                    )}
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    {info && info.found ? (
                       <div>
-                        {info.isSpecial ? (
-                          <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#D97706', padding: '1px 5px', borderRadius: '4px', border: '1px solid #FCD34D', display: 'inline-block', marginBottom: '2px' }}>
-                            업체 특별가
-                          </span>
+                        <span style={{ color: '#1E40AF', fontWeight: '700', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
+                          💧 희석제 품번 및 단가 정보
+                        </span>
+                        {solventCodes.length === 0 ? (
+                          <span style={{ fontSize: '13px', color: '#94A3B8' }}>미등록</span>
                         ) : (
-                          <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginBottom: '2px' }}>기본가</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {solventCodes.map((code, idx) => {
+                              const info = getPartPriceInfo(code, selectedCompany.name);
+                              return (
+                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #DBEAFE' }}>
+                                  <div>
+                                    <span style={{ fontWeight: '700', color: '#1E3A8A', fontSize: '13px', display: 'block' }}>{code}</span>
+                                    {info && info.found && (
+                                      <span style={{ fontSize: '11px', color: '#64748B' }}>{info.partName}</span>
+                                    )}
+                                  </div>
+                                  <div style={{ textAlign: 'right' }}>
+                                    {info && info.found ? (
+                                      <div>
+                                        {info.isSpecial ? (
+                                          <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#D97706', padding: '1px 5px', borderRadius: '4px', border: '1px solid #FCD34D', display: 'inline-block', marginBottom: '2px' }}>
+                                            업체 특별가
+                                          </span>
+                                        ) : (
+                                          <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginBottom: '2px' }}>기본가</span>
+                                        )}
+                                        <div style={{ fontWeight: '800', color: info.isSpecial ? '#D97706' : '#2563EB', fontSize: '14px' }}>
+                                          {info.finalPrice.toLocaleString()} 원
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <span style={{ fontSize: '11px', color: '#EF4444', backgroundColor: '#FEE2E2', padding: '2px 6px', borderRadius: '4px' }}>부품 미등록</span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
-                        <div style={{ fontWeight: '800', color: info.isSpecial ? '#D97706' : '#2563EB', fontSize: '14px' }}>
-                          {info.finalPrice.toLocaleString()} 원
-                        </div>
                       </div>
-                    ) : (
-                      <span style={{ fontSize: '11px', color: '#EF4444', backgroundColor: '#FEE2E2', padding: '2px 6px', borderRadius: '4px' }}>부품 미등록</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-})()}
+                    </div>
+                  );
+                })()}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '20px' }}>
@@ -2050,7 +2154,6 @@ function App() {
             />
           </div>
 
-         
         </div>
       )}
 
