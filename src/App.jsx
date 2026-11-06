@@ -127,17 +127,54 @@ function App() {
   }, [session])
 
   // 💡 [추가] 로그인 및 로그아웃 핸들러
-  const handleLogin = async (e) => {
+ const handleLogin = async (e) => {
     e.preventDefault()
     setLoginError('')
     setUploading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    setUploading(false)
-    if (error) {
-      setLoginError('로그인 실패: 이메일 또는 비밀번호를 확인하세요.')
+
+    try {
+      const cleanInput = email.trim().toLowerCase()
+      const userEmail = cleanInput.includes('@') ? cleanInput : `${cleanInput}@mace-inkjet.co.kr`
+      const username = userEmail.split('@')[0]
+
+      // 1. Supabase Auth 로그인 시도
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ 
+        email: userEmail, 
+        password 
+      })
+
+      // 2. profiles / users DB 조회
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .ilike('username', username)
+
+      const profile = profiles && profiles.length > 0 ? (profiles.find(p => p.is_approved) || profiles[0]) : null
+
+      // Auth 로그인 실패 시 DB 비밀번호 일치 여부 확인
+      if (authError || !authData?.user) {
+        if (!profile || profile.password !== password) {
+          setLoginError('로그인 실패: 이메일 또는 비밀번호를 확인하세요.')
+          setUploading(false)
+          return
+        }
+      }
+
+      // 승인 상태 체크
+      if (profile && !profile.is_approved) {
+        setLoginError('🔒 관리자 승인 대기 중인 계정입니다.')
+        setUploading(false)
+        return
+      }
+
+      // 로그인 성공 처리
+      setSession(authData?.session || { user: { email: userEmail } })
+    } catch (err) {
+      setLoginError('로그인 처리 중 오류가 발생했습니다.')
+    } finally {
+      setUploading(false)
     }
   }
-
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setSession(null)
